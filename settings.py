@@ -7,7 +7,7 @@ USE_POINTS = False
 DEMO_PAGE_INTRO_HTML = ''
 PARTICIPANT_FIELDS = []
 SESSION_FIELDS = []
-ROOMS = []
+ROOMS = [dict(name= 'default_room',display_name= 'Salle - Tragédie des communs (jeu écologique)',participant_label_file= None,)]
 
 ADMIN_USERNAME = 'admin'
 # for security, best to set admin password in an environment variable
