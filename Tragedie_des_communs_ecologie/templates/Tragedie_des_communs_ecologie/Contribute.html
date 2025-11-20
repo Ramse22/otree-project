@@ -1,0 +1,17 @@
+{{ extends 'global/Page.html' }}
+{{ block title }}Tour {{ subsession.round_number }} - Contribution{{ endblock }}
+
+{{ block content }}
+
+<div class="info-box">
+    <p><strong>Votre budget actuel :</strong> {{ current_budget }} UM </p>
+    {% if show_tax_warning %}
+        <p style="color: red; font-weight: bold;">⚠️ Une taxe est en vigueur : contribution minimale demandée de 4 UM</p>
+    {% endif %}
+</div>
+
+{{ formfield "contribution" }}
+
+{{ next_button }}
+
+{{ endblock }}

@@ -1,0 +1,19 @@
+{{ extends 'global/Page.html' }}
+
+{{ block title }}
+Tour {{ subsession.round_number }} - Discussion
+{{ endblock }}
+
+{{ block content }}
+
+<p style="font-size: 1.1em; font-style: italic;">
+    Vous pouvez désormais discuter stratégie avec vos voisins. Leurs avis peuvent vous aider à prendre la bonne décision ! (ou pas)
+</p>
+
+<p style="margin-top: 30px; color: #666;">
+    L'animateur vous indiquera quand passer à la phase de contribution.
+</p>
+
+{{ next_button }}
+
+{{ endblock }}

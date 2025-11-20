@@ -1,0 +1,62 @@
+{{ extends 'global/Page.html' }}
+{{ block title }}
+Tour {{ subsession.round_number }} - Résultats
+{{ endblock }}
+
+{{ block content }}
+
+<div class="results-container">
+    <div class="contribution-stats">
+        <h3> Etat des contributions </h3>
+        <p><strong>Contribution totale du groupe :</strong> {{ group.total_contribution }} UM</p>
+        <p><strong>Votre contribution :</strong> {{ player.contribution }} UM</p>
+    </div>
+
+    <div class="river-state">
+        <h3>État du cours d'eau</h3>
+        {% if group.efficiency_level == 0 %}
+            <div style="background-color: #8B0000; color: white; padding: 15px; border-radius: 5px;">
+                <p><strong>🔴 Effondrement écologique</strong></p>
+                <p>Tous les joueurs reçoivent : -7 UM</p>
+            </div>
+        {% elif group.efficiency_level == 1 %}
+            <div style="background-color: #DC143C; color: white; padding: 15px; border-radius: 5px;">
+                <p><strong>🟠 Dégradation continue</strong></p>
+                <p>Tous les joueurs reçoivent : -4 UM</p>
+            </div>
+        {% elif group.efficiency_level == 2 %}
+            <div style="background-color: #FFD700; color: black; padding: 15px; border-radius: 5px;">
+                <p><strong>🟡 Stabilité</strong></p>
+                <p>Tous les joueurs reçoivent : 0 UM</p>
+            </div>
+        {% elif group.efficiency_level == 3 %}
+            <div style="background-color: #90EE90; color: black; padding: 15px; border-radius: 5px;">
+                <p><strong>🟢 Amélioration</strong></p>
+                <p>Tous les joueurs reçoivent : +5 UM</p>
+            </div>
+        {% elif group.efficiency_level == 4 %}
+            <div style="background-color: #228B22; color: white; padding: 15px; border-radius: 5px;">
+                <p><strong>🟢 Amélioration avancée</strong></p>
+                <p>Tous les joueurs reçoivent : +7 UM</p>
+            </div>
+        {% endif %}
+    </div>
+    
+
+    <div class="budget-stats">
+        <h3>Votre budget</h3>
+        <p><strong>Budget avant le tour :</strong> {{ player.budget_before }} UM</p>
+        <p><strong>Contribution :</strong> - {{ player.contribution }} UM</p>
+        {% if player.contribution < 4 and group.subsession.tax_enacted %}
+            <p style="color: red; font-weight: bold;"><strong>Amende pour fraude fiscale :</strong> - 4 UM</p>
+        {% endif %}
+        <p><strong>Bonus/Pénalité écologique :</strong> {{ group.bonus_per_player }} UM</p>
+        <p style="font-size: 1.2em; font-weight: bold; border-top: 2px solid #333; padding-top: 10px;">
+            <strong>Budget après le tour :</strong> {{ player.budget_after }} UM
+        </p>
+    </div>
+</div>
+
+{{ next_button }}
+
+{{ endblock }}

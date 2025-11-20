@@ -1,0 +1,140 @@
+{{ extends 'global/Page.html' }}
+{{ block title }}
+Fin du jeu - Résultats finaux
+{{ endblock }}
+
+{{ block content }}
+
+<div class="final-stats">
+    <h3>Votre budget final</h3>
+    <p style="font-size: 1.5em; font-weight: bold; color: #228B22;">
+        {{ final_budget }} UM
+    </p>
+</div>
+
+<div class="river-state">
+        <h3>État du cours d'eau</h3>
+        {% if group.efficiency_level == 0 %}
+            <div style="background-color: #8B0000; color: white; padding: 15px; border-radius: 5px;">
+                <p><strong>🔴 Effondrement écologique</strong></p>
+            </div>
+        {% elif group.efficiency_level == 1 %}
+            <div style="background-color: #DC143C; color: white; padding: 15px; border-radius: 5px;">
+                <p><strong>🟠 Dégradation continue</strong></p>
+            </div>
+        {% elif group.efficiency_level == 2 %}
+            <div style="background-color: #FFD700; color: black; padding: 15px; border-radius: 5px;">
+                <p><strong>🟡 Stabilité</strong></p>
+            </div>
+        {% elif group.efficiency_level == 3 %}
+            <div style="background-color: #90EE90; color: black; padding: 15px; border-radius: 5px;">
+                <p><strong>🟢 Amélioration</strong></p>
+            </div>
+        {% elif group.efficiency_level == 4 %}
+            <div style="background-color: #228B22; color: white; padding: 15px; border-radius: 5px;">
+                <p><strong>🟢 Amélioration avancée</strong></p>
+            </div>
+        {% endif %}
+    </div>
+
+<div class="lorenz-container" style="margin-top: 40px;">
+    <h3>Courbe de Lorenz - Inégalités de richesse</h3>
+    <canvas id="lorenzChart" width="400" height="400"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data from context
+    const finalBudgets = {{ final_budgets_json|safe }};
+    
+    // Calculate Lorenz curve
+    function calculateLorenzCurve(budgets) {
+            // Normalize budgets to start from zero
+        const minBudget = Math.min(...budgets);
+        const adjusted = budgets.map(b => b - minBudget);
+
+        const sorted = budgets.slice().sort((a, b) => a - b);
+        const n = sorted.length;
+        const totalWealth = sorted.reduce((a, b) => a + b, 0);
+        
+        let cumulativeWealth = 0;
+        const lorenzPoints = [[0, 0]];
+        
+        for (let i = 0; i < n; i++) {
+            cumulativeWealth += sorted[i];
+            const xPercent = ((i + 1) / n) * 100;
+            const yPercent = (cumulativeWealth / totalWealth) * 100;
+            lorenzPoints.push([xPercent, yPercent]);
+        }
+        
+        return lorenzPoints;
+    }
+    
+    const lorenzPoints = calculateLorenzCurve(finalBudgets);
+    
+    const ctx = document.getElementById('lorenzChart').getContext('2d');
+    const lorenzChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [
+                {
+                    label: 'Courbe de Lorenz',
+                    data: lorenzPoints,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    showLine: true
+                },
+                {
+                    label: 'Égalité parfaite',
+                    data: [[0, 0], [100, 100]],
+                    borderColor: 'rgb(255, 99, 132)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    showLine: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                title: {
+                    display: true,
+                    text: 'Plus la courbe s\'éloigne de la diagonale, plus les inégalités augmentent'
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: '% de la population (cumulée)'
+                    },
+                    min: 0,
+                    max: 100
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: '% de la richesse (cumulée)'
+                    },
+                    min: 0,
+                    max: 100
+                }
+            }
+        }
+    });
+</script>
+
+<p style="margin-top: 30px; text-align: center;">
+    Merci de votre participation !
+</p>
+
+{{ endblock }}
