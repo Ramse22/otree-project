@@ -13,7 +13,7 @@ ADMIN_USERNAME = 'admin'
 # for security, best to set admin password in an environment variable
 ADMIN_PASSWORD = environ.get('OTREE_ADMIN_PASSWORD')
 
-SECRET_KEY = 'phdtrack'
+SECRET_KEY = environ.get('OTREE_SECRET_KEY', 'default_secret_key')
 
 # if an app is included in SESSION_CONFIGS, you don't need to list it here
 INSTALLED_APPS = ['otree']
