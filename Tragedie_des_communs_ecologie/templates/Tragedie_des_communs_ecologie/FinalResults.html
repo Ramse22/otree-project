@@ -1,140 +1,174 @@
 {{ extends 'global/Page.html' }}
-{{ block title }}
-Fin du jeu - Résultats finaux
-{{ endblock }}
+{{ block title }}Fin du jeu - Résultats finaux{{ endblock }}
 
 {{ block content }}
 
+<!-- Display the player's final budget -->
 <div class="final-stats">
-    <h3>Votre budget final</h3>
-    <p style="font-size: 1.5em; font-weight: bold; color: #228B22;">
-        {{ final_budget }} UM
-    </p>
+  <h3>Votre budget final</h3>
+  <p style="font-size:1.5em;font-weight:bold;color:#228B22;">{{ final_budget }}</p>
 </div>
 
+<!-- River ecological status panel (based on the group's collective effort) -->
 <div class="river-state">
-        <h3>État du cours d'eau</h3>
-        {% if group.efficiency_level == 0 %}
-            <div style="background-color: #8B0000; color: white; padding: 15px; border-radius: 5px;">
-                <p><strong>🔴 Effondrement écologique</strong></p>
-            </div>
-        {% elif group.efficiency_level == 1 %}
-            <div style="background-color: #DC143C; color: white; padding: 15px; border-radius: 5px;">
-                <p><strong>🟠 Dégradation continue</strong></p>
-            </div>
-        {% elif group.efficiency_level == 2 %}
-            <div style="background-color: #FFD700; color: black; padding: 15px; border-radius: 5px;">
-                <p><strong>🟡 Stabilité</strong></p>
-            </div>
-        {% elif group.efficiency_level == 3 %}
-            <div style="background-color: #90EE90; color: black; padding: 15px; border-radius: 5px;">
-                <p><strong>🟢 Amélioration</strong></p>
-            </div>
-        {% elif group.efficiency_level == 4 %}
-            <div style="background-color: #228B22; color: white; padding: 15px; border-radius: 5px;">
-                <p><strong>🟢 Amélioration avancée</strong></p>
-            </div>
-        {% endif %}
+  <h3>État du cours d'eau</h3>
+  {% if group.efficiency_level == 0 %}
+    <div style="background:#8B0000;color:#fff;padding:15px;border-radius:5px;">
+      <p><strong> Effondrement écologique : Le cours d'eau a été fortement dégradé </strong></p>
     </div>
-
-<div class="lorenz-container" style="margin-top: 40px;">
-    <h3>Courbe de Lorenz - Inégalités de richesse</h3>
-    <canvas id="lorenzChart" width="400" height="400"></canvas>
+  {% elif group.efficiency_level == 1 %}
+    <div style="background:#DC143C;color:#fff;padding:15px;border-radius:5px;">
+      <p><strong> L'état du cours d'eau s'est dégradé </strong></p>
+    </div>
+  {% elif group.efficiency_level == 2 %}
+    <div style="background:#FFD700;color:#000;padding:15px;border-radius:5px;">
+      <p><strong> L'état du cours d'eau stable </strong></p>
+    </div>
+  {% elif group.efficiency_level == 3 %}
+    <div style="background:#90EE90;color:#000;padding:15px;border-radius:5px;">
+      <p><strong> Le cours d'eau a été partiellement restauré </strong></p>
+    </div>
+  {% elif group.efficiency_level == 4 %}
+    <div style="background:#228B22;color:#fff;padding:15px;border-radius:5px;">
+      <p><strong> Le cours d'eau a été entièrement restauré </strong></p>
+    </div>
+  {% endif %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Data from context
-    const finalBudgets = {{ final_budgets_json|safe }};
-    
-    // Calculate Lorenz curve
-    function calculateLorenzCurve(budgets) {
-            // Normalize budgets to start from zero
-        const minBudget = Math.min(...budgets);
-        const adjusted = budgets.map(b => b - minBudget);
+<!-- Lorenz curve container + Gini coefficient -->
+<div class="lorenz-container" style="margin-top:24px;">
+  <h3>Courbe de Lorenz - Inégalités de richesse</h3>
+  <div id="gini" style="margin:6px 0 10px;font-weight:600;"></div>
+  <div style="position:relative;height:420px;">
+    <canvas id="lorenzChart"></canvas>
+  </div>
+  <div id="lorenzError" style="margin-top:8px;color:#b00020;display:none;"></div>
+</div>
 
-        const sorted = budgets.slice().sort((a, b) => a - b);
-        const n = sorted.length;
-        const totalWealth = sorted.reduce((a, b) => a + b, 0);
-        
-        let cumulativeWealth = 0;
-        const lorenzPoints = [[0, 0]];
-        
-        for (let i = 0; i < n; i++) {
-            cumulativeWealth += sorted[i];
-            const xPercent = ((i + 1) / n) * 100;
-            const yPercent = (cumulativeWealth / totalWealth) * 100;
-            lorenzPoints.push([xPercent, yPercent]);
-        }
-        
-        return lorenzPoints;
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  (function () {
+    // Input data (server-rendered via tojson): array of final budgets for all players
+    const raw = {{ final_budgets_json|safe }};
+
+    // Data normalization/validation: make into to numbers and drop non-finite values to avoid NaN in calculations/charts
+    const budgets = (Array.isArray(raw) ? raw : []).map(Number).filter(Number.isFinite);
+    if (budgets.length === 0) return showError("Aucun budget valide fourni.");
+
+    // Lorenz curves require non-negative values; if negative, shift so the minimum becomes 0
+    const minVal = Math.min(...budgets);
+    const nonNeg = minVal < 0 ? budgets.map(v => v - minVal) : budgets.slice();
+
+    // Work on a sorted copy to build the curve
+    const sorted = nonNeg.slice().sort((a, b) => a - b);
+
+    // Total sum used to convert to cumulative shares
+    const total = sorted.reduce((s, v) => s + v, 0);
+
+    // Compute Lorenz curve points ( in percentages) 
+    const lorenz = [];
+
+    // Degenerate case (everyone has 0): the curve coincides with the diagonal.
+    if (total === 0) {
+      lorenz.push({ x: 0, y: 0 }, { x: 100, y: 100 });
+    } else {
+      let cum = 0;
+      const n = sorted.length;
+      lorenz.push({ x: 0, y: 0 });
+      for (let i = 0; i < n; i++) {
+        cum += sorted[i];
+        lorenz.push({ x: ((i + 1) / n) * 100, y: (cum / total) * 100 });
+      }
     }
-    
-    const lorenzPoints = calculateLorenzCurve(finalBudgets);
-    
+
+    // Gini index: G = 1 − 2 × area under the Lorenz curve. Approximate the area via trapezoids between consecutive points (and compute their area).
+    const gini = (() => {
+      const pts = lorenz.map(p => ({ x: p.x / 100, y: p.y / 100 })); // normalize to [0,1]
+      let area = 0;
+      for (let i = 1; i < pts.length; i++) {
+        area += ((pts[i].y + pts[i - 1].y) / 2) * (pts[i].x - pts[i - 1].x);
+      }
+      return Math.max(0, Math.min(1, 1 - 2 * area)); // clamp to [0,1]
+    })();
+
+    // Display the Gini coefficient (if available)
+    const giniEl = document.getElementById('gini');
+    if (giniEl) giniEl.textContent = `Indice de Gini: ${(gini * 100).toFixed(1)}%`;
+
+    // Chart rendering
     const ctx = document.getElementById('lorenzChart').getContext('2d');
-    const lorenzChart = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-            datasets: [
-                {
-                    label: 'Courbe de Lorenz',
-                    data: lorenzPoints,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    showLine: true
-                },
-                {
-                    label: 'Égalité parfaite',
-                    data: [[0, 0], [100, 100]],
-                    borderColor: 'rgb(255, 99, 132)',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    showLine: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: true
-                },
-                title: {
-                    display: true,
-                    text: 'Plus la courbe s\'éloigne de la diagonale, plus les inégalités augmentent'
-                }
-            },
-            scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: '% de la population (cumulée)'
-                    },
-                    min: 0,
-                    max: 100
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: '% de la richesse (cumulée)'
-                    },
-                    min: 0,
-                    max: 100
-                }
+    new Chart(ctx, {
+      type: 'scatter',
+      data: {
+        datasets: [
+          {  // Reference line (perfect equality)
+            type: 'line',
+            order: 0,
+            label: 'Égalité parfaite',
+            data: [{ x: 0, y: 0 }, { x: 100, y: 100 }],
+            borderColor: 'rgba(220,20,60,1)',
+            borderDash: [6, 4],
+            borderWidth: 2,
+            pointRadius: 0
+          },
+          { // Lorenz curve
+            order: 1,
+            label: 'Courbe de Lorenz',
+            data: lorenz,
+            showLine: true,
+            borderColor: 'rgba(30,144,255,1)',
+            backgroundColor: 'rgba(30,144,255,0.12)',
+            borderWidth: 3,
+            pointRadius: 3,
+            tension: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true },
+          title: {
+            display: true,
+            text: "Plus la courbe s'éloigne de la diagonale, plus les inégalités augmentent"
+          },
+          tooltip: {
+            callbacks: {
+              label: (c) => `(${c.parsed.x.toFixed(1)}%, ${c.parsed.y.toFixed(1)}%)`
             }
+          }
+        },
+        scales: { // Axes in percentage
+          x: {
+            type: 'linear',
+            title: { display: true, text: '% de la population (cumulée)' },
+            min: 0,
+            max: 100,
+            ticks: { callback: (v) => v + '%' }
+          },
+          y: {
+            title: { display: true, text: '% de la richesse (cumulée)' },
+            min: 0,
+            max: 100,
+            ticks: { callback: (v) => v + '%' }
+          }
         }
+      }
     });
+
+    // Show a readable on-screen message if data are missing/invalid (error)
+    function showError(msg) {
+      const el = document.getElementById('lorenzError');
+      if (el) {
+        el.textContent = msg;
+        el.style.display = 'block';
+      } else {
+        console.error(msg);
+      }
+    }
+  })();
 </script>
 
-<p style="margin-top: 30px; text-align: center;">
-    Merci de votre participation !
-</p>
-
+<p style="margin-top: 18px; text-align: center;">Merci de votre participation !</p>
 {{ endblock }}

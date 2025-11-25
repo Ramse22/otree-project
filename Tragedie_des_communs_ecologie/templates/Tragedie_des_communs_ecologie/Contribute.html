@@ -5,10 +5,17 @@
 
 <div class="info-box">
     <p><strong>Votre budget actuel :</strong> {{ current_budget }} UM </p>
+
+    <p style="color: #666; font-style: italic;">
+        Vous pouvez contribuer entre 0 et 10 UM.
+    </p>
+
     {% if show_tax_warning %}
         <p style="color: red; font-weight: bold;">⚠️ Une taxe est en vigueur : contribution minimale demandée de 4 UM</p>
     {% endif %}
+
 </div>
+
 
 {{ formfield "contribution" }}
 

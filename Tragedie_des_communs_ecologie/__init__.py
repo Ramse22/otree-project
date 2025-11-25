@@ -1,33 +1,55 @@
+"""
+Common good game applied to river restoration using oTree.
+
+Players contribute each round (0-10 UM). Group contribution determines
+ecological efficiency level (thresholds scale by number of player n). Before round 4, players vote
+on a minimum contribution tax (4 UM); if passed, it applies to round 4 onwards. If not, playerscan vote again on
+round 5. Budgets carry across rounds. Final page shows the player's final budget, the river state,
+ and a Lorenz curve with Gini coefficient.
+"""
+
 from otree.api import *
 import json
 
+
+# ---------------------------- Constants ----------------------------
+
+
 class C(BaseConstants):
-    NAME_IN_URL = 'tragedie_des_communs_ecologie'
+    """Game constants and UI limits."""
+
+    NAME_IN_URL = "tragedie_des_communs_ecologie"
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 5
 
-    ENDOWMENT = cu(100)
-    START_BUDGET = cu(50)
-    PER_ROUND_ENDOWMENT = cu(0)
+    START_BUDGET = cu(50)  # initial budget at round 1
 
     CONTRIB_MIN = cu(0)
     CONTRIB_MAX = cu(10)
 
-    THRESHOLD_RATIOS = (0.3, 0.5, 0.7, 0.9)
-    BONUS_BY_LEVEL = (cu(-7), cu(-4), cu(0), cu(5), cu(7))
-    TAX_MIN_CONTRIB = cu(4)
+    THRESHOLD_RATIOS = (0.3, 0.5, 0.7, 0.9)  # ratios for S1..S4 thresholds
+    # Thresholds are based on n:
+    # S1: 0 < T < 3n
+    # S2: 3n+1 < T < 5n
+    # S3: 5n+1 < T < 7n
+    # S4: 7n+1 < T < 9n
+    # S5: 9n < T
+
+    BONUS_BY_LEVEL = (cu(-7), cu(-4), cu(0), cu(5), cu(7))  # per-player bonus
+    TAX_MIN_CONTRIB = cu(4)  # minimum contribution when tax is enacted
+
+
+# ---------------------------- Subsession ----------------------------
 
 
 class Subsession(BaseSubsession):
-    tax_enacted = models.BooleanField(initial=False)
+    """Round-level state (tax is tracked per group, see Group.tax_enacted)."""
+
+    pass
 
 
 def creating_session(subsession: BaseSubsession):
-    if subsession.round_number == 1:
-        subsession.tax_enacted = False
-    else:
-        prev = subsession.in_round(subsession.round_number - 1)
-        subsession.tax_enacted = bool(getattr(prev, 'tax_enacted', False))
+    """Initialize per-round state and carry forward `budget_before`."""
 
     for p in subsession.get_players():
         if subsession.round_number == 1:
@@ -37,18 +59,36 @@ def creating_session(subsession: BaseSubsession):
             if prev_player.budget_after is not None:
                 p.budget_before = prev_player.budget_after
             else:
-                p.budget_before = prev_player.budget_before + prev_player.payoff if prev_player.payoff else prev_player.budget_before
+                # Fallback keeps play going if a prior payoff/budget is missing in tests.
+                p.budget_before = (
+                    prev_player.budget_before + prev_player.payoff
+                    if prev_player.payoff
+                    else prev_player.budget_before
+                )
 
+
+# ---------------------------- Group and players ----------------------------
 
 
 def apply_vote(group: BaseGroup):
-    """Calculate vote result and update tax_enacted."""
+    """Apply simple-majority vote to set the group's tax flag for THIS round and seed next round."""
     players = group.get_players()
     yes = sum(1 for p in players if p.vote_tax)
-    group.subsession.tax_enacted = (yes >= len(players) / 2)
+    enacted = yes >= len(players) / 2
+    group.tax_enacted = enacted
+
+    # Persist to next round so round-5 knows the outcome immediately
+    if group.round_number < C.NUM_ROUNDS:
+        next_group = group.in_round(group.round_number + 1)
+        next_group.tax_enacted = enacted
 
 
 class Group(BaseGroup):
+    """Group-level state and methods to compute efficiency levels and payoffs."""
+
+    tax_enacted = models.BooleanField(
+        initial=False
+    )  # persists across rounds via creating_session
     total_contribution = models.CurrencyField()
     bonus_per_player = models.CurrencyField()
     n_players = models.IntegerField()
@@ -59,133 +99,181 @@ class Group(BaseGroup):
     S4 = models.CurrencyField()
 
     def compute_thresholds(self):
-        """Calcule S1..S4 selon le nombre de joueurs présents."""
+        """Compute thresholds S1..S4 based on number of players and THRESHOLD_RATIOS."""
         n = len(self.get_players())
         self.n_players = n
-        # Thresholds are based on n:
-        # S1: 0 < T < 3n
-        # S2: 3n+1 < T < 5n
-        # S3: 5n+1 < T < 7n
-        # S4: 7n+1 < T < 9n
-        # S5: 9n < T
-        self.S1 = cu(3 * n)
-        self.S2 = cu(5 * n)
-        self.S3 = cu(7 * n)
-        self.S4 = cu(9 * n)
+
+        # max total contribution if everyone gives CONTRIB_MAX
+        max_total = float(C.CONTRIB_MAX) * n
+
+        r1, r2, r3, r4 = C.THRESHOLD_RATIOS
+        # integers (UM) for thresholds; adjust rounding policy if you prefer floor/ceil
+        self.S1 = cu(int(round(r1 * max_total)))
+        self.S2 = cu(int(round(r2 * max_total)))
+        self.S3 = cu(int(round(r3 * max_total)))
+        self.S4 = cu(int(round(r4 * max_total)))
 
     def classify_level(self):
-        """Fixe efficiency_level (0..4) et bonus_per_player à partir de total_contribution."""
+        """Classify efficiency level based on total contribution and thresholds."""
         x = float(self.total_contribution)
         s1 = float(self.S1)
         s2 = float(self.S2)
         s3 = float(self.S3)
         s4 = float(self.S4)
-        
+
         if x < s1:
-            lvl = 0  # Effondrement écologique: -7
+            lvl = 0  # ecological collapse: -7
         elif x < s2:
-            lvl = 1  # Dégradation continue: -4
+            lvl = 1  # sustained degradation: -4
         elif x < s3:
-            lvl = 2  # Stabilité: 0
+            lvl = 2  # stability: 0
         elif x < s4:
-            lvl = 3  # Amélioration: +5
+            lvl = 3  # improvement: +5
         else:
-            lvl = 4  # Amélioration avancée: +7
-        
+            lvl = 4  # strong improvement: +7
+
         self.efficiency_level = lvl
         self.bonus_per_player = C.BONUS_BY_LEVEL[lvl]
 
 
 def set_payoffs(group: BaseGroup):
+    """Compute total contribution, classify efficiency level, and set player payoffs."""
     players = group.get_players()
-    group.total_contribution = sum(p.contribution for p in players)
+
+    # treat missing contributions as 0
+    group.total_contribution = sum((p.contribution or cu(0)) for p in players)
+
     group.compute_thresholds()
     group.classify_level()
+
+    tax_active = bool(group.tax_enacted)  # current round
+
     for p in players:
         fine = cu(0)
-        if p.subsession.tax_enacted and p.contribution < C.TAX_MIN_CONTRIB:
+        # apply fine if tax is active and contribution below minimum
+        if tax_active and p.contribution < C.TAX_MIN_CONTRIB:
             fine = C.TAX_MIN_CONTRIB
+
         p.payoff = group.bonus_per_player - fine
-        p.budget_after = p.budget_before - p.contribution + group.bonus_per_player - fine
+        p.budget_after = (
+            p.budget_before - (p.contribution or cu(0)) + group.bonus_per_player - fine
+        )
 
 
 class Player(BasePlayer):
+    """Player-level fields and methods."""
+
     contribution = models.CurrencyField(
         label="Combien souhaitez-vous investir dans la restauration du cours d'eau ?",
         min=0,
         max=10,
     )
-    vote_tax = models.BooleanField(label="Souhaitez-vous voter pour l'instauration de la taxe ?",choices=[
-        [False, 'Non'],
-        [True, 'Oui'],
-    ])
+    vote_tax = models.BooleanField(
+        label="Souhaitez-vous voter pour l'instauration de la taxe ?",
+        choices=[
+            [False, "Non"],
+            [True, "Oui"],
+        ],
+    )
     budget_before = models.CurrencyField()
     budget_after = models.CurrencyField()
 
     def contribution_min(self):
-        # No minimum enforced by form
+        """Minimum contribution based on no negative budget."""
         return C.CONTRIB_MIN
 
     def contribution_max(self):
-        budget = self.field_maybe_none('budget_before')
+        """Maximum contribution based on current budget; fallback if budget is missing."""
+        budget = self.field_maybe_none("budget_before")
         if budget is None:
             if self.round_number == 1:
                 budget = C.START_BUDGET
             else:
                 prev = self.in_round(self.round_number - 1)
                 budget = prev.budget_after if prev.budget_after else C.START_BUDGET
-        return min(C.CONTRIB_MAX, budget)
-    
+        return max(C.CONTRIB_MIN, min(C.CONTRIB_MAX, budget))
+
+
 # -------------------- Pages --------------------
 
+
+def vote_is_displayed(player: Player) -> bool:
+    """
+    Voting appears:
+    - Round 4: always.
+    - Round 5: only if tax was NOT enacted for this player's group in round 4.
+    """
+    if player.round_number == 4:
+        return True
+    if player.round_number == 5:
+        return not bool(player.group.tax_enacted)
+    return False
+
+
 class VoteTax(Page):
-    form_model = 'player'
-    form_fields = ['vote_tax']
+    """Page for voting on minimum contribution tax."""
+
+    form_model = "player"
+    form_fields = ["vote_tax"]
 
     @staticmethod
     def is_displayed(player: Player):
-        return player.round_number == 4
+        return vote_is_displayed(player)
 
     @staticmethod
     def vars_for_template(player: Player):
         return dict(
-            note=f"Le vote à la majorité simple détermine si une taxe minimale de "
-                 f"{C.TAX_MIN_CONTRIB} UM s'applique à partir du prochain tour."
+            note=(
+                "Le vote à la majorité simple détermine si une taxe minimale de "
+                f"{C.TAX_MIN_CONTRIB} UM s'applique immédiatement et pour les prochains tours."
+            )
         )
 
 
 class VoteWait(WaitPage):
-    after_all_players_arrive = 'apply_vote'
+    """Wait for all players to vote and apply the vote result."""
+
+    after_all_players_arrive = "apply_vote"
 
     @staticmethod
     def is_displayed(player: Player):
-        return player.round_number == 4
+        return vote_is_displayed(player)
 
 
 class Discussion(Page):
+    """Discussion page: allows players to communicate before next rounds."""
+
     @staticmethod
     def is_displayed(player: Player):
         return player.round_number == 3
 
 
 class Contribute(Page):
-    form_model = 'player'
-    form_fields = ['contribution']
+    """Page for contribution decision."""
+
+    form_model = "player"
+    form_fields = ["contribution"]
 
     @staticmethod
     def vars_for_template(player: Player):
-        budget = player.field_maybe_none('budget_before') or C.START_BUDGET
-        # show warning only when the tax is active THIS round (i.e. was set earlier and copied)
+        budget = player.field_maybe_none("budget_before") or C.START_BUDGET
+        # Show warning only when the tax is active in THIS round.
         return dict(
             current_budget=int(budget),
-            show_tax_warning=bool(player.subsession.tax_enacted),
+            show_tax_warning=bool(player.group.tax_enacted),
         )
 
 
 class ResultsWaitPage(WaitPage):
-    after_all_players_arrive = 'set_payoffs'
+    """Wait for everyone's contribution to compute playoffs."""
+
+    after_all_players_arrive = "set_payoffs"
+
 
 class Results(Page):
+    """Propagate budget_after to next round's budget_before.
+    Done here (not creating_session) to ensure set_payoffs has already computed budget_after."""
+
     @staticmethod
     def before_next_page(player: Player, timeout_happened):
         # Set budget_before for NEXT round (if not last round)
@@ -195,6 +283,8 @@ class Results(Page):
 
 
 class FinalResults(Page):
+    """Final page: displays player's final budget and Lorenz curve with Gini coefficient."""
+
     @staticmethod
     def is_displayed(player: Player):
         return player.round_number == C.NUM_ROUNDS
@@ -202,13 +292,19 @@ class FinalResults(Page):
     @staticmethod
     def vars_for_template(player: Player):
         # Get all players in session and their final budgets
-        all_players = player.session.get_participants()
-        final_budgets = [float(p.payoff_plus_participation_fee()) for p in all_players]
-        
+        players_final_round = player.subsession.get_players()
+        final_budgets = [
+            float(p.budget_after)
+            for p in players_final_round
+            if p.budget_after is not None
+        ]
         return dict(
             final_budget=player.budget_after,
             final_budgets_json=json.dumps(final_budgets),
         )
+
+
+# ---------------------------- Page sequence ----------------------------
 
 page_sequence = [
     VoteTax,
