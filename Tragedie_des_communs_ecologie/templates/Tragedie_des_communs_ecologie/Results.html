@@ -8,8 +8,8 @@ Tour {{ subsession.round_number }} - Résultats
 <div class="results-container">
     <div class="contribution-stats">
         <h3> Etat des contributions </h3>
-        <p><strong>Contribution totale du groupe :</strong> {{ group.total_contribution }} UM</p>
-        <p><strong>Votre contribution :</strong> {{ player.contribution }} UM</p>
+        <p><strong>Contribution totale du groupe :</strong> {{ group.total_contribution }} </p>
+        <p><strong>Votre contribution :</strong> {{ player.contribution }} </p>
     </div>
 
     <div class="river-state">
@@ -45,14 +45,14 @@ Tour {{ subsession.round_number }} - Résultats
 
     <div class="budget-stats">
         <h3>Votre budget</h3>
-        <p><strong>Budget avant le tour :</strong> {{ player.budget_before }} UM</p>
-        <p><strong>Contribution :</strong> - {{ player.contribution }} UM</p>
+        <p><strong>Budget avant le tour :</strong> {{ player.budget_before }} </p>
+        <p><strong>Contribution :</strong> - {{ player.contribution }} </p>
         {% if player.contribution < C.TAX_MIN_CONTRIB and group.tax_enacted %}
             <p style="color: red; font-weight: bold;"><strong>Amende pour fraude fiscale : </strong> - {{ C.TAX_MIN_CONTRIB }}</p>
         {% endif %}
-        <p><strong>Bonus/Pénalité écologique :</strong> {{ group.bonus_per_player }} UM</p>
+        <p><strong>Bonus/Pénalité écologique :</strong> {{ group.bonus_per_player }} </p>
         <p style="font-size: 1.2em; font-weight: bold; border-top: 2px solid #333; padding-top: 10px;">
-            <strong>Budget après le tour :</strong> {{ player.budget_after }} UM
+            <strong>Budget après le tour :</strong> {{ player.budget_after }} 
         </p>
     </div>
 </div>
