@@ -137,28 +137,43 @@ class Group(BaseGroup):
 
 
 def set_payoffs(group: BaseGroup):
-    """Compute total contribution, classify efficiency level, and set player payoffs."""
+    """Compute total contribution, classify efficiency level, apply fines/bonuses,
+    but never let any player's budget_after go below 0."""
     players = group.get_players()
 
-    # treat missing contributions as 0
+    # total contributions for the round
     group.total_contribution = sum((p.contribution or cu(0)) for p in players)
 
     group.compute_thresholds()
     group.classify_level()
 
-    tax_active = bool(group.tax_enacted)  # current round
+    tax_active = bool(getattr(group.subsession, "tax_enacted", False))
 
     for p in players:
+        contrib = p.contribution or cu(0)
+        budget_before = p.budget_before or cu(0)
+
+        # determine fine (only if tax active AND player could have paid the minimum)
         fine = cu(0)
-        # apply fine if tax is active and contribution below minimum
-        if tax_active and p.contribution < C.TAX_MIN_CONTRIB:
+        if (
+            tax_active
+            and contrib < C.TAX_MIN_CONTRIB
+            and budget_before >= C.TAX_MIN_CONTRIB
+        ):
             fine = C.TAX_MIN_CONTRIB
 
-        p.payoff = group.bonus_per_player - fine
-        p.budget_after = (
-            p.budget_before - (p.contribution or cu(0)) + group.bonus_per_player - fine
-        )
+        # raw budget after applying contribution, ecological bonus/penalty and fine
+        raw_budget_after = budget_before - contrib + group.bonus_per_player - fine
 
+        # CAP: budgets may not go below zero
+        budget_after_capped = max(cu(0), raw_budget_after)
+
+        # set payoff to reflect the actual change in budget this round
+        # (keep it as a Currency value)
+        p.payoff = budget_after_capped - budget_before
+
+        # persist capped budget
+        p.budget_after = budget_after_capped
 
 class Player(BasePlayer):
     """Player-level fields and methods."""
@@ -263,6 +278,22 @@ class Contribute(Page):
             show_tax_warning=bool(player.group.tax_enacted),
         )
 
+    @staticmethod
+    def error_message(player: Player, values):
+        """Server-side validation for contribution form."""
+        contrib = values.get("contribution")
+        if contrib is None:
+            return
+        budget = player.field_maybe_none("budget_before")
+        if budget is None:
+            budget = C.START_BUDGET
+        # ensure contribution is not larger than available budget
+        if contrib > budget:
+            return {
+                "contribution": (
+                    f"Vous ne pouvez pas contribuer plus que votre budget actuel ({int(budget)} UM)."
+                )
+            }
 
 class ResultsWaitPage(WaitPage):
     """Wait for everyone's contribution to compute playoffs."""
@@ -291,16 +322,28 @@ class FinalResults(Page):
 
     @staticmethod
     def vars_for_template(player: Player):
-        # Get all players in session and their final budgets
+        # final budgets for the final round
         players_final_round = player.subsession.get_players()
         final_budgets = [
-            float(p.budget_after)
-            for p in players_final_round
-            if p.budget_after is not None
+            float(p.budget_after) for p in players_final_round if p.budget_after is not None
         ]
+
+        # Compute average contribution for each round
+        avg_contribs = []
+        for r in range(1, C.NUM_ROUNDS + 1):
+            subs = player.in_round(r).subsession
+            contribs = [float(p.contribution or 0) for p in subs.get_players()]
+            avg = round(sum(contribs) / len(contribs), 2) if contribs else 0.0
+            avg_contribs.append(avg)
+
+        # Compute the overall average (NEW)
+        avg_contribs_mean = round(sum(avg_contribs) / len(avg_contribs), 2) if avg_contribs else 0.0
+
         return dict(
             final_budget=player.budget_after,
             final_budgets_json=json.dumps(final_budgets),
+            avg_contribs=avg_contribs,
+            avg_contribs_mean=avg_contribs_mean,  # NEW
         )
 
 
