@@ -100,9 +100,8 @@ class Group(BaseGroup):
 
     def compute_thresholds(self):
         """Compute thresholds S1..S4 based on number of players and THRESHOLD_RATIOS."""
-        n = len(self.get_players())
-        self.n_players = n
-
+        n =self.n_players
+    
         # max total contribution if everyone gives CONTRIB_MAX
         max_total = float(C.CONTRIB_MAX) * n
 
@@ -140,16 +139,22 @@ def set_payoffs(group: BaseGroup):
     """Compute total contribution, classify efficiency level, apply fines/bonuses,
     but never let any player's budget_after go below 0."""
     players = group.get_players()
+    
+    # Count active players (not dropouts)
+    active_players = [p for p in players if getattr(p.participant, 'status', None) != 'dropout']
+    n_active = len(active_players)
+    
+    # total contributions for the round (only from active players)
+    group.total_contribution = sum((p.contribution or cu(0)) for p in active_players)
 
-    # total contributions for the round
-    group.total_contribution = sum((p.contribution or cu(0)) for p in players)
-
-    group.compute_thresholds()
+    # Recompute thresholds with ACTIVE player count
+    group.n_players = n_active
+    group.compute_thresholds()  # Uses n_active now
     group.classify_level()
 
     tax_active = bool(getattr(group.subsession, "tax_enacted", False))
 
-    for p in players:
+    for p in active_players:
         contrib = p.contribution or cu(0)
         budget_before = p.budget_before or cu(0)
 
@@ -169,11 +174,15 @@ def set_payoffs(group: BaseGroup):
         budget_after_capped = max(cu(0), raw_budget_after)
 
         # set payoff to reflect the actual change in budget this round
-        # (keep it as a Currency value)
         p.payoff = budget_after_capped - budget_before
-
-        # persist capped budget
         p.budget_after = budget_after_capped
+    
+    # Handle dropout players (contribution = 0, no payoff)
+    for p in players:
+        if getattr(p.participant, 'status', None) == 'dropout':
+            p.contribution = cu(0)
+            p.payoff = cu(0)
+            p.budget_after = p.budget_before
 
 
 class Player(BasePlayer):
@@ -374,6 +383,9 @@ class Results(Page):
 
     @staticmethod
     def before_next_page(player: Player, timeout_happened):
+        # Track dropouts
+        if timeout_happened:
+            player.participant.status = 'dropout'
         # Set budget_before for NEXT round (if not last round)
         if player.round_number < C.NUM_ROUNDS:
             next_player = player.in_round(player.round_number + 1)
@@ -386,6 +398,13 @@ class FinalResults(Page):
     @staticmethod
     def is_displayed(player: Player):
         return player.round_number == C.NUM_ROUNDS
+    
+    @staticmethod
+    def before_next_page(player: Player, timeout_happened):
+        # Mark as finished only if not already marked as dropout
+        status = getattr(player.participant, 'status', None)
+        if status != 'dropout':
+            player.participant.status = 'finished'
 
     @staticmethod
     def vars_for_template(player: Player):
@@ -416,6 +435,8 @@ class FinalResults(Page):
             avg_contribs=avg_contribs,
             avg_contribs_mean=avg_contribs_mean,  # NEW
         )
+    
+    
 
 
 # ---------------------------- Page sequence ----------------------------

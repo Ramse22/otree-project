@@ -7,7 +7,12 @@ SESSION_CONFIGS = [
         name="test_1",
         num_demo_participants=3,
         app_sequence=["Tragedie_des_communs_ecologie"],
+        timeout_seconds=30,
     )
+]
+
+PARTICIPANT_FIELDS = [
+    {'name': 'status', 'default': ''}
 ]
 
 # settings for html pages
