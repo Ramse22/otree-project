@@ -24,11 +24,6 @@ ROOMS = [
     )
 ]
 
-# custom export
-CUSTOM_EXPORT_FUNCTIONS = [
-    'Tragedie_des_communs_ecologie.custom_export_detailed_gameplay'
-]
-
 ADMIN_USERNAME = "admin"
 # for security, admin password is set in an environment variable
 ADMIN_PASSWORD = environ.get("OTREE_ADMIN_PASSWORD")
@@ -36,3 +31,8 @@ ADMIN_PASSWORD = environ.get("OTREE_ADMIN_PASSWORD")
 SECRET_KEY = environ.get("OTREE_SECRET_KEY", "default_secret_key")
 
 INSTALLED_APPS = ["otree"]
+
+# custom export
+CUSTOM_EXPORT_FUNCTIONS = [
+    'Tragedie_des_communs_ecologie.custom_export'
+]
