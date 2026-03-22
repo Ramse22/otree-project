@@ -1,7 +1,6 @@
 from os import environ
 
 # Configuration settings on server side
-SESSION_CONFIG_DEFAULTS = dict(real_world_currency_per_point=1, participation_fee=0)
 SESSION_CONFIGS = [
     dict(
         name="test_1",
