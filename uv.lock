@@ -59,7 +59,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "otree", specifier = "==5.11.4" },
+    { name = "otree", specifier = "==6.0" },
     { name = "psycopg2", specifier = ">=2.8.4" },
     { name = "sentry-sdk", specifier = ">=0.7.9" },
 ]
@@ -72,7 +72,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/64db92e53b86efccf
 
 [[package]]
 name = "otree"
-version = "5.11.4"
+version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -86,7 +86,7 @@ dependencies = [
     { name = "wtforms" },
     { name = "wtforms-sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/8c/1fdf083dcd0882304962e893ada44bf334365ea0b9d9c2c382d13099d5af/otree-5.11.4.tar.gz", hash = "sha256:c2fc5a00585adf5aa4a343b599fd35197c7c3e249ffd972e0faf4d9b048b78e2", size = 451727, upload-time = "2025-08-23T18:31:06.272Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/8b/0c2b2251c8ba22b12582806d057e7bde21a35ec7231eadb5cc3f86829996/otree-6.0.0.tar.gz", hash = "sha256:819babb81aa64ca86942039002eb70cea5bbc34cd8176a6c77af195f2172bc2f", size = 488345, upload-time = "2025-12-11T04:26:13.52Z" }
 
 [[package]]
 name = "psycopg2"

@@ -1,6 +1,7 @@
 from os import environ
 
 # Configuration settings on server side
+SESSION_CONFIG_DEFAULTS = dict(participation_fee=0, real_world_currency_per_point=None)
 SESSION_CONFIGS = [
     dict(
         name="test_1",
@@ -21,6 +22,11 @@ ROOMS = [
         name="default_room",
         display_name="Salle - Tragédie des communs (jeu écologique)",
     )
+]
+
+# custom export
+CUSTOM_EXPORT_FUNCTIONS = [
+    'Tragedie_des_communs_ecologie.custom_export_detailed_gameplay'
 ]
 
 ADMIN_USERNAME = "admin"

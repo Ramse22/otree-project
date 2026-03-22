@@ -175,6 +175,7 @@ def set_payoffs(group: BaseGroup):
         # persist capped budget
         p.budget_after = budget_after_capped
 
+
 class Player(BasePlayer):
     """Player-level fields and methods."""
 
@@ -208,6 +209,65 @@ class Player(BasePlayer):
                 budget = prev.budget_after if prev.budget_after else C.START_BUDGET
         return max(C.CONTRIB_MIN, min(C.CONTRIB_MAX, budget))
 
+    def custom_export(players):
+        """
+        Export long format par round - Format style feuille de calcul
+        Une ligne = un joueur à un round
+        """
+        yield [
+            'Player ID',
+            'Budget de départ',
+            'Tour',
+            'Contribution',
+            'Contribution total du groupe',
+            'État de la rivière',
+            'Bonus/Malus (incluant fine)',
+            'Budget fin du tour',
+            'Vote tax'
+        ]
+        
+        for player in players:
+            # Budget initial (toujours le budget du round 1)
+            first_round_player = player.in_round(1)
+            budget_initial = first_round_player.budget_before or C.START_BUDGET
+            
+            # Pour chaque round du joueur
+            for round_num in range(1, C.NUM_ROUNDS + 1):
+                player_in_round = player.in_round(round_num)
+                group_in_round = player_in_round.group
+                
+                # Déterminer l'état de la rivière (nom human-readable)
+                efficiency_level = group_in_round.efficiency_level
+                if efficiency_level == 0:
+                    river_state = "Effondrement écologique"
+                elif efficiency_level == 1:
+                    river_state = "Dégradation soutenue"
+                elif efficiency_level == 2:
+                    river_state = "Stabilité"
+                elif efficiency_level == 3:
+                    river_state = "Amélioration légère"
+                elif efficiency_level == 4:
+                    river_state = "Amélioration avancée"
+                else:
+                    river_state = "Inconnu"
+                
+                # Vote tax (None si pas demandé ce round, True/False sinon)
+                vote_tax = player_in_round.vote_tax if player_in_round.vote_tax is not None else ""
+                
+                # Bonus/Malus (le payoff du joueur ce round, qui inclut la fine)
+                bonus_malus = player_in_round.payoff
+                
+                yield [
+                    player.participant.id_in_session,
+                    budget_initial,
+                    round_num,
+                    player_in_round.contribution,
+                    group_in_round.total_contribution,
+                    river_state,
+                    bonus_malus,
+                    player_in_round.budget_after,
+                    vote_tax,
+                ]
 
 # -------------------- Pages --------------------
 
@@ -295,6 +355,7 @@ class Contribute(Page):
                 )
             }
 
+
 class ResultsWaitPage(WaitPage):
     """Wait for everyone's contribution to compute playoffs."""
 
@@ -325,7 +386,9 @@ class FinalResults(Page):
         # final budgets for the final round
         players_final_round = player.subsession.get_players()
         final_budgets = [
-            float(p.budget_after) for p in players_final_round if p.budget_after is not None
+            float(p.budget_after)
+            for p in players_final_round
+            if p.budget_after is not None
         ]
 
         # Compute average contribution for each round
@@ -337,7 +400,9 @@ class FinalResults(Page):
             avg_contribs.append(avg)
 
         # Compute the overall average (NEW)
-        avg_contribs_mean = round(sum(avg_contribs) / len(avg_contribs), 2) if avg_contribs else 0.0
+        avg_contribs_mean = (
+            round(sum(avg_contribs) / len(avg_contribs), 2) if avg_contribs else 0.0
+        )
 
         return dict(
             final_budget=player.budget_after,
