@@ -1,61 +1,259 @@
 {{ extends 'global/Page.html' }}
-{{ block title }}
-Tour {{ subsession.round_number }} - Résultats
+
+{{ block title }}Résultats — Tour {{ subsession.round_number }}{{ endblock }}
+
+{{ block styles }}
+<style>
+  /* ─── River state panel ─────────────────────────────────────── */
+  .river-state-panel {
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: 1px solid transparent;
+    transition: all 0.5s ease;
+  }
+
+  .river-state-icon {
+    font-size: 2.4rem;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .river-state-label {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .river-state-desc {
+    font-size: 0.88rem;
+    opacity: 0.8;
+  }
+
+  .rs-0 { background: #8b2020; color: white; border-color: #6b1515; }
+  .rs-1 { background: #c0392b; color: white; border-color: #9b2d2d; }
+  .rs-2 { background: #8b6914; color: white; border-color: #7a5c0e; }
+  .rs-3 { background: var(--moss); color: white; border-color: #3a6640; }
+  .rs-4 { background: #2e7d32; color: white; border-color: #1b5e20; }
+
+  /* ─── Efficiency level bar ──────────────────────────────────── */
+  .efficiency-steps {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .eff-step {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    transition: background 0.4s ease;
+  }
+
+  .eff-step.active { background: var(--moss); border-color: var(--moss); }
+  .eff-step.active.s0 { background: #8b2020; border-color: #6b1515; }
+  .eff-step.active.s1 { background: #c0392b; border-color: #9b2d2d; }
+  .eff-step.active.s2 { background: #b8860b; border-color: #9a7009; }
+  .eff-step.active.s3 { background: var(--moss); border-color: #3a6640; }
+  .eff-step.active.s4 { background: #2e7d32; border-color: #1b5e20; }
+
+  .eff-step-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    padding: 0 2px;
+  }
+
+  /* ─── Budget breakdown ──────────────────────────────────────── */
+  .budget-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .budget-card-header {
+    padding: 16px 24px;
+    background: var(--earth-pale);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--earth-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .budget-breakdown {
+    padding: 8px 24px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.93rem;
+  }
+  .stat-row:last-child { border-bottom: none; }
+
+  .stat-label { color: var(--text-secondary); }
+  .stat-value { font-weight: 500; }
+  .stat-neg { color: var(--crisis-red); }
+  .stat-pos { color: var(--moss); }
+  .stat-neutral { color: var(--text-primary); }
+
+  .budget-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: var(--river-pale);
+    border-top: 2px solid var(--river-light);
+  }
+
+  .budget-total-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--river-deep);
+  }
+
+  .budget-total-amount {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    font-weight: 500;
+    color: var(--river-deep);
+    letter-spacing: -0.02em;
+  }
+
+  /* ─── Group contribution bar ─────────────────────────────────── */
+  .group-contrib-bar {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+</style>
 {{ endblock }}
 
 {{ block content }}
 
-<div class="results-container">
-    <div class="contribution-stats">
-        <h3> Etat des contributions </h3>
-        <p><strong>Contribution totale du groupe :</strong> {{ group.total_contribution }} </p>
-        <p><strong>Votre contribution :</strong> {{ player.contribution }} </p>
+<!-- River ecological state -->
+<div class="river-state-panel rs-{{ group.efficiency_level }}">
+  <div class="river-state-icon">
+    {% if group.efficiency_level == 0 %}E
+    {% elif group.efficiency_level == 1 %}D
+    {% elif group.efficiency_level == 2 %}S
+    {% elif group.efficiency_level == 3 %}A
+    {% elif group.efficiency_level == 4 %}R
+    {% endif %}
+  </div>
+  <div class="river-state-text">
+    <div class="river-state-label">
+      {% if group.efficiency_level == 0 %}Effondrement écologique
+      {% elif group.efficiency_level == 1 %}Dégradation continue
+      {% elif group.efficiency_level == 2 %}Stabilité
+      {% elif group.efficiency_level == 3 %}Amélioration
+      {% elif group.efficiency_level == 4 %}Amélioration avancée
+      {% endif %}
     </div>
-
-    <div class="river-state">
-        <h3>État du cours d'eau</h3>
-        {% if group.efficiency_level == 0 %}
-            <div style="background-color: #8B0000; color: white; padding: 15px; border-radius: 5px;">
-                <p><strong> Effondrement écologique</strong></p>
-                <p>Tous les joueurs reçoivent : -7 UM</p>
-            </div>
-        {% elif group.efficiency_level == 1 %}
-            <div style="background-color: #DC143C; color: white; padding: 15px; border-radius: 5px;">
-                <p><strong> Dégradation continue</strong></p>
-                <p>Tous les joueurs reçoivent : -4 UM</p>
-            </div>
-        {% elif group.efficiency_level == 2 %}
-            <div style="background-color: #FFD700; color: black; padding: 15px; border-radius: 5px;">
-                <p><strong> Stabilité</strong></p>
-                <p>Tous les joueurs reçoivent : 0 UM</p>
-            </div>
-        {% elif group.efficiency_level == 3 %}
-            <div style="background-color: #90EE90; color: black; padding: 15px; border-radius: 5px;">
-                <p><strong> Amélioration</strong></p>
-                <p>Tous les joueurs reçoivent : +5 UM</p>
-            </div>
-        {% elif group.efficiency_level == 4 %}
-            <div style="background-color: #228B22; color: white; padding: 15px; border-radius: 5px;">
-                <p><strong> Amélioration avancée</strong></p>
-                <p>Tous les joueurs reçoivent : +7 UM</p>
-            </div>
-        {% endif %}
+    <div class="river-state-desc">
+      {% if group.efficiency_level == 0 %}L'état du cours d'eau s'est fortement détérioré.
+      {% elif group.efficiency_level == 1 %}Le cours d'eau continue de se dégrader.
+      {% elif group.efficiency_level == 2 %}L'état du cours d'eau est maintenu, sans amélioration.
+      {% elif group.efficiency_level == 3 %}Le cours d'eau s'améliore grâce à vos contributions.
+      {% elif group.efficiency_level == 4 %}Excellente mobilisation collective — le cours d'eau est restauré !
+      {% endif %}
     </div>
-    
-
-    <div class="budget-stats">
-        <h3>Votre budget</h3>
-        <p><strong>Budget avant le tour :</strong> {{ player.budget_before }} </p>
-        <p><strong>Contribution :</strong> - {{ player.contribution }} </p>
-        {% if player.contribution < C.TAX_MIN_CONTRIB and group.tax_enacted %}
-            <p style="color: red; font-weight: bold;"><strong>Amende pour fraude fiscale : </strong> - {{ C.TAX_MIN_CONTRIB }}</p>
-        {% endif %}
-        <p><strong>Bonus/Pénalité écologique :</strong> {{ group.bonus_per_player }} </p>
-        <p style="font-size: 1.2em; font-weight: bold; border-top: 2px solid #333; padding-top: 10px;">
-            <strong>Budget après le tour :</strong> {{ player.budget_after }} 
-        </p>
-    </div>
+  </div>
 </div>
+
+<!-- Efficiency level steps -->
+<div class="card" style="margin-bottom: 20px;">
+  <div class="card-title">Niveau de restauration atteint</div>
+  <div class="efficiency-steps">
+    <div class="eff-step {% if group.efficiency_level >= 0 %}active s{{ group.efficiency_level }}{% endif %}"></div>
+    <div class="eff-step {% if group.efficiency_level >= 1 %}active s{{ group.efficiency_level }}{% endif %}"></div>
+    <div class="eff-step {% if group.efficiency_level >= 2 %}active s{{ group.efficiency_level }}{% endif %}"></div>
+    <div class="eff-step {% if group.efficiency_level >= 3 %}active s{{ group.efficiency_level }}{% endif %}"></div>
+    <div class="eff-step {% if group.efficiency_level >= 4 %}active s{{ group.efficiency_level }}{% endif %}"></div>
+  </div>
+  <div class="eff-step-labels">
+    <span>Effondrement</span>
+    <span>Dégradation</span>
+    <span>Stabilité</span>
+    <span>Amélioration</span>
+    <span>Restauration</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="stat-row">
+    <span class="stat-label">Contribution totale du groupe</span>
+    <span class="stat-value">{{ group.total_contribution }}</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Votre contribution</span>
+    <span class="stat-value">{{ player.contribution }}</span>
+  </div>
+</div>
+
+<!-- Budget breakdown -->
+<div class="budget-card">
+  <div class="budget-card-header">Bilan budgétaire</div>
+  <div class="budget-breakdown">
+    <div class="stat-row">
+      <span class="stat-label">Budget en début de tour</span>
+      <span class="stat-value stat-neutral">{{ player.budget_before }}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Contribution investie</span>
+      <span class="stat-value stat-neg">− {{ player.contribution }}</span>
+    </div>
+    {% if player.contribution < C.TAX_MIN_CONTRIB and group.tax_enacted %}
+    <div class="stat-row">
+      <span class="stat-label">Amende (contribution inférieure au minimum fiscal)</span>
+      <span class="stat-value stat-neg">− {{ C.TAX_MIN_CONTRIB }}</span>
+    </div>
+    {% endif %}
+    <div class="stat-row">
+      <span class="stat-label">
+        {% if group.bonus_per_player < 0 %}Pénalité écologique
+        {% elif group.bonus_per_player > 0 %}Bonus écologique
+        {% else %}Impact écologique
+        {% endif %}
+      </span>
+      <span class="stat-value {% if group.bonus_per_player < 0 %}stat-neg{% elif group.bonus_per_player > 0 %}stat-pos{% else %}stat-neutral{% endif %}">
+        {% if group.bonus_per_player > 0 %}+{% endif %}{{ group.bonus_per_player }}
+      </span>
+    </div>
+  </div>
+  <div class="budget-total-row">
+    <span class="budget-total-label">Budget en fin de tour</span>
+    <span class="budget-total-amount">{{ player.budget_after }}</span>
+  </div>
+</div>
+
+{% if player.contribution < C.TAX_MIN_CONTRIB and group.tax_enacted %}
+<div class="alert alert-danger">
+  <span class="alert-icon"></span>
+  <div>Une amende de <strong>{{ C.TAX_MIN_CONTRIB }}</strong> a été appliquée car votre contribution était inférieure au minimum fiscal en vigueur.</div>
+</div>
+{% endif %}
 
 {{ next_button }}
 

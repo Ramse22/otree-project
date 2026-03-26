@@ -1,0 +1,116 @@
+# ══════════════════════════════════════════════════════════════════
+#  DEPLOYMENT GUIDE — Tragédie des communs
+#  Debian VM · nginx · systemd
+# ══════════════════════════════════════════════════════════════════
+
+
+# ── 1. Environment file ───────────────────────────────────────────
+# Create /etc/otree/.env (chmod 600, chown www-data or your service user)
+# Copy and fill in the values below:
+
+# /etc/otree/.env
+# ─────────────────
+# DATABASE_URL=postgres://otree:YOURPASSWORD@localhost/otree
+# OTREE_ADMIN_PASSWORD=choose_a_strong_password
+# OTREE_SECRET_KEY=generate_with_python_-c_"import_secrets;print(secrets.token_hex(32))"
+# OTREE_REST_KEY=another_strong_random_key        # enables the REST API in oTree 6
+# LOBBY_SECRET_KEY=yet_another_random_key
+# LOBBY_USERS_FILE=/etc/otree/lobby_users.yaml
+# OTREE_URL=http://localhost:8000
+# OTREE_SESSION_CONFIG=test_1
+
+
+# ── 2. Systemd service: oTree ─────────────────────────────────────
+# Save as /etc/systemd/system/otree.service
+
+# [Unit]
+# Description=oTree – Tragédie des communs
+# After=network.target postgresql.service
+#
+# [Service]
+# Type=simple
+# User=www-data
+# WorkingDirectory=/path/to/your/otree-project
+# EnvironmentFile=/etc/otree/.env
+# ExecStart=/path/to/your/venv/bin/otree prodserver 8000
+# Restart=on-failure
+# RestartSec=5
+#
+# [Install]
+# WantedBy=multi-user.target
+
+
+# ── 3. Systemd service: Lobby ─────────────────────────────────────
+# Save as /etc/systemd/system/otree-lobby.service
+
+# [Unit]
+# Description=oTree Lobby – session management
+# After=network.target otree.service
+#
+# [Service]
+# Type=simple
+# User=www-data
+# WorkingDirectory=/path/to/your/otree-project
+# EnvironmentFile=/etc/otree/.env
+# ExecStart=/path/to/your/venv/bin/uvicorn lobby:app --host 127.0.0.1 --port 8001
+# Restart=on-failure
+# RestartSec=5
+#
+# [Install]
+# WantedBy=multi-user.target
+
+
+# ── 4. PostgreSQL setup (run once) ────────────────────────────────
+# sudo -u postgres psql
+# CREATE USER otree WITH PASSWORD 'YOURPASSWORD';
+# CREATE DATABASE otree OWNER otree;
+# \q
+
+# Then run migrations:
+# cd /path/to/your/otree-project
+# source /etc/otree/.env   (or export the vars manually)
+# otree resetdb            (WARNING: wipes all data — only run once at setup)
+
+
+# ── 5. Lobby dependencies ─────────────────────────────────────────
+# pip install fastapi uvicorn httpx python-multipart itsdangerous pyyaml
+# (or add to pyproject.toml dependencies)
+
+
+# ── 6. Enable and start services ─────────────────────────────────
+# sudo systemctl daemon-reload
+# sudo systemctl enable otree otree-lobby
+# sudo systemctl start  otree otree-lobby
+# sudo systemctl status otree otree-lobby
+
+
+# ── 7. nginx ──────────────────────────────────────────────────────
+# sudo cp nginx_otree.conf /etc/nginx/sites-available/otree
+# sudo ln -s /etc/nginx/sites-available/otree /etc/nginx/sites-enabled/otree
+# sudo nginx -t
+# sudo systemctl reload nginx
+
+
+# ── 8. First lobby login ─────────────────────────────────────────
+# Visit http://YOUR_SERVER_IP/lobby
+# Default credentials: admin / changeme
+# CHANGE THE PASSWORD by editing /etc/otree/lobby_users.yaml
+#
+# Format of lobby_users.yaml:
+#   username1: <sha256 of password>
+#   username2: <sha256 of password>
+#
+# Generate a hashed password with:
+#   python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+
+
+# ── 9. Add more lobby users ───────────────────────────────────────
+# Edit /etc/otree/lobby_users.yaml and add entries:
+#   prof_martin: <sha256 hash>
+#   prof_dupont: <sha256 hash>
+# No restart needed — the file is read on every login attempt.
+
+
+# ── 10. Check logs ────────────────────────────────────────────────
+# sudo journalctl -u otree       -f    # oTree logs
+# sudo journalctl -u otree-lobby -f    # lobby logs

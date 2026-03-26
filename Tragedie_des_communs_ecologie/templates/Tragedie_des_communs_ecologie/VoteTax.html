@@ -1,0 +1,196 @@
+{{ extends 'global/Page.html' }}
+
+{{ block title }}Vote démocratique — Tour {{ subsession.round_number }}{{ endblock }}
+
+{{ block styles }}
+<style>
+  .vote-context {
+    background: var(--river-pale);
+    border: 1px solid var(--river-light);
+    border-radius: var(--radius-lg);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+  }
+
+  .vote-context-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--river-deep);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .vote-context-body {
+    font-size: 0.93rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .vote-context-body strong {
+    color: var(--river-deep);
+  }
+
+  /* ─── Vote cards ─────────────────────────────────────────────── */
+  .vote-card-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 24px 0;
+  }
+
+  @media (max-width: 480px) {
+    .vote-card-group { grid-template-columns: 1fr; }
+  }
+
+  .vote-card {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .vote-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0; height: 0;
+  }
+
+  .vote-card-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 28px 20px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .vote-card-label:hover {
+    border-color: var(--river-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .vote-card input[type="radio"]:checked + .vote-card-label {
+    box-shadow: 0 0 0 3px rgba(46,107,126,0.2), var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .vote-card.vote-yes input:checked + .vote-card-label {
+    border-color: var(--moss);
+    background: #f0f8f0;
+  }
+
+  .vote-card.vote-no input:checked + .vote-card-label {
+    border-color: var(--crisis-red);
+    background: var(--crisis-light);
+  }
+
+  .vote-card-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .vote-card-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .vote-card.vote-yes input:checked ~ * .vote-card-title,
+  .vote-card.vote-yes input:checked + .vote-card-label .vote-card-title {
+    color: var(--moss);
+  }
+
+  .vote-card-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ─── Reminder ───────────────────────────────────────────────── */
+  .vote-reminder {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+</style>
+{{ endblock }}
+
+{{ block content }}
+
+<!-- Context banner -->
+<div class="vote-context">
+  <div class="vote-context-title">
+    Vote à la majorité simple
+  </div>
+  <div class="vote-context-body">
+    {{ note }}
+  </div>
+</div>
+
+<!-- What is at stake -->
+<div class="card">
+  <div class="card-title">Ce que la taxe implique</div>
+  <div class="stat-row">
+    <span class="stat-label">Contribution minimale obligatoire</span>
+    <span class="stat-value">{{ C.TAX_MIN_CONTRIB }}</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Amende si contribution inférieure</span>
+    <span class="stat-value" style="color: var(--crisis-red);">− {{ C.TAX_MIN_CONTRIB }}</span>
+  </div>
+  <div class="stat-row">
+    <span class="stat-label">Application</span>
+    <span class="stat-value">Ce tour et les suivants</span>
+  </div>
+</div>
+
+<!-- Vote form: replace the default formfield with styled cards -->
+<div id="vote-form">
+
+  <div class="vote-card-group">
+
+    <label class="vote-card vote-yes">
+      <input type="radio" name="vote_tax" value="True" id="vote-yes" required>
+      <div class="vote-card-label">
+        <div class="vote-card-icon"></div>
+        <div class="vote-card-title">Oui</div>
+        <div class="vote-card-desc">Je vote pour l'instauration de la taxe</div>
+      </div>
+    </label>
+
+    <label class="vote-card vote-no">
+      <input type="radio" name="vote_tax" value="False" id="vote-no">
+      <div class="vote-card-label">
+        <div class="vote-card-icon"></div>
+        <div class="vote-card-title">Non</div>
+        <div class="vote-card-desc">Je vote contre l'instauration de la taxe</div>
+      </div>
+    </label>
+
+  </div>
+
+  <p class="vote-reminder">(Rappel : vous faites partie des contribuables)</p>
+
+</div>
+
+{{ next_button }}
+
+{{ endblock }}
+
+{{ block scripts }}
+<script>
+  // No JS needed: styled radios are the actual submitted fields.
+</script>
+{{ endblock }}

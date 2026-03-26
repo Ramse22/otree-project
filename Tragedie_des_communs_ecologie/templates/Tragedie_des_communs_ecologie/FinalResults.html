@@ -1,179 +1,352 @@
 {{ extends 'global/Page.html' }}
-{{ block title }}Fin du jeu - Résultats finaux{{ endblock }}
+
+{{ block title }}Résultats finaux{{ endblock }}
+
+{{ block styles }}
+<style>
+  /* ─── Hero budget ────────────────────────────────────────────── */
+  .final-hero {
+    background: linear-gradient(135deg, var(--river-deep) 0%, var(--river-mid) 100%);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .final-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30px; right: -30px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .final-hero-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.65;
+    margin-bottom: 8px;
+  }
+
+  .final-hero-amount {
+    font-family: var(--font-display);
+    font-size: 3.5rem;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .final-hero-unit {
+    font-size: 1.2rem;
+    opacity: 0.7;
+    margin-left: 4px;
+  }
+
+  .final-hero-avg {
+    font-size: 0.85rem;
+    opacity: 0.6;
+    margin-top: 10px;
+  }
+
+  /* ─── River state (final) ────────────────────────────────────── */
+  .final-river-panel {
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .rs-0 { background: #8b2020; color: white; border-color: #6b1515; }
+  .rs-1 { background: #c0392b; color: white; border-color: #9b2d2d; }
+  .rs-2 { background: #8b6914; color: white; border-color: #7a5c0e; }
+  .rs-3 { background: var(--moss); color: white; border-color: #3a6640; }
+  .rs-4 { background: #2e7d32; color: white; border-color: #1b5e20; }
+
+  .final-river-icon { font-size: 2.6rem; flex-shrink: 0; }
+
+  .final-river-label {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .final-river-desc {
+    font-size: 0.88rem;
+    opacity: 0.85;
+  }
+
+  /* ─── Lorenz section ─────────────────────────────────────────── */
+  .lorenz-section {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .lorenz-header {
+    padding: 18px 28px;
+    background: var(--earth-pale);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lorenz-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--earth-dark);
+    margin-bottom: 2px;
+  }
+
+  .lorenz-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .gini-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--river-deep);
+    color: white;
+    border-radius: 24px;
+    padding: 4px 14px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 10px;
+  }
+
+  .lorenz-chart-wrap {
+    padding: 24px 28px;
+    height: 380px;
+    position: relative;
+  }
+
+  #lorenzError {
+    color: var(--crisis-red);
+    font-size: 0.88rem;
+    padding: 12px 28px;
+    display: none;
+  }
+
+  /* ─── Thank you ──────────────────────────────────────────────── */
+  .thanks-block {
+    text-align: center;
+    padding: 28px 0 8px;
+  }
+
+  .thanks-icon { font-size: 2rem; margin-bottom: 10px; }
+
+  .thanks-text {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--river-deep);
+    font-style: italic;
+  }
+
+  .thanks-sub {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+</style>
+{{ endblock }}
 
 {{ block content }}
 
-<!-- Display the player's final budget -->
-<div class="final-stats">
-  <h3>Votre budget final</h3>
-  <p style="font-size:1.5em;font-weight:bold;color:#228B22;">{{ final_budget }}</p>
+<!-- Hero: final budget -->
+<div class="final-hero">
+  <div class="final-hero-label">Votre budget final</div>
+  <div class="final-hero-amount">
+    {{ final_budget }}<span class="final-hero-unit">UM</span>
+  </div>
+  <div class="final-hero-avg">
+    Contribution moyenne sur 5 tours : <strong>{{ avg_contribs_mean }} UM</strong>
+  </div>
 </div>
 
-<!-- River ecological status panel (based on the group's collective effort) -->
-<div class="river-state">
-  <h3>État du cours d'eau</h3>
-  {% if group.efficiency_level == 0 %}
-    <div style="background:#8B0000;color:#fff;padding:15px;border-radius:5px;">
-      <p><strong> Effondrement écologique : Le cours d'eau a été fortement dégradé </strong></p>
+<!-- Final river ecological state -->
+<div class="final-river-panel rs-{{ group.efficiency_level }}">
+  <div class="final-river-icon">
+      {% if group.efficiency_level == 0 %}E
+      {% elif group.efficiency_level == 1 %}D
+      {% elif group.efficiency_level == 2 %}S
+      {% elif group.efficiency_level == 3 %}A
+      {% elif group.efficiency_level == 4 %}R
+    {% endif %}
+  </div>
+  <div>
+    <div class="final-river-label">
+      {% if group.efficiency_level == 0 %}Effondrement écologique
+      {% elif group.efficiency_level == 1 %}L'état du cours d'eau s'est dégradé
+      {% elif group.efficiency_level == 2 %}L'état du cours d'eau est resté stable
+      {% elif group.efficiency_level == 3 %}Le cours d'eau a été partiellement restauré
+      {% elif group.efficiency_level == 4 %}Le cours d'eau a été entièrement restauré !
+      {% endif %}
     </div>
-  {% elif group.efficiency_level == 1 %}
-    <div style="background:#DC143C;color:#fff;padding:15px;border-radius:5px;">
-      <p><strong> L'état du cours d'eau s'est dégradé </strong></p>
+    <div class="final-river-desc">
+      {% if group.efficiency_level == 0 %}Les contributions collectives n'ont pas suffi à préserver le cours d'eau.
+      {% elif group.efficiency_level == 1 %}Le groupe n'a pas atteint le seuil de stabilité.
+      {% elif group.efficiency_level == 2 %}Le groupe a maintenu l'équilibre, sans parvenir à l'amélioration.
+      {% elif group.efficiency_level == 3 %}Bonne mobilisation collective — la rivière va mieux !
+      {% elif group.efficiency_level == 4 %}Excellente coopération — la restauration est un succès total.
+      {% endif %}
     </div>
-  {% elif group.efficiency_level == 2 %}
-    <div style="background:#FFD700;color:#000;padding:15px;border-radius:5px;">
-      <p><strong> L'état du cours d'eau stable </strong></p>
-    </div>
-  {% elif group.efficiency_level == 3 %}
-    <div style="background:#90EE90;color:#000;padding:15px;border-radius:5px;">
-      <p><strong> Le cours d'eau a été partiellement restauré </strong></p>
-    </div>
-  {% elif group.efficiency_level == 4 %}
-    <div style="background:#228B22;color:#fff;padding:15px;border-radius:5px;">
-      <p><strong> Le cours d'eau a été entièrement restauré </strong></p>
-    </div>
-  {% endif %}
+  </div>
 </div>
 
-<!-- Average contributions per round -->
-<p style="margin-top:8px;">
-  <strong> Contribution moyenne des joueurs :</strong> {{ avg_contribs_mean }} UM
-</p>
-
-<!-- Lorenz curve container + Gini coefficient -->
-<div class="lorenz-container" style="margin-top:24px;">
-  <h3>Courbe de Lorenz - Inégalités de richesse</h3>
-  <div id="gini" style="margin:6px 0 10px;font-weight:600;"></div>
-  <div style="position:relative;height:420px;">
+<!-- Lorenz curve -->
+<div class="lorenz-section">
+  <div class="lorenz-header">
+    <div class="lorenz-title">Courbe de Lorenz — Inégalités de richesse finale</div>
+    <div class="lorenz-subtitle">Plus la courbe s'éloigne de la diagonale, plus les inégalités sont importantes.</div>
+    <div id="gini-badge" class="gini-badge" style="display:none;">
+      <span id="gini-text">Calcul en cours…</span>
+    </div>
+  </div>
+  <div class="lorenz-chart-wrap">
     <canvas id="lorenzChart"></canvas>
   </div>
-  <div id="lorenzError" style="margin-top:8px;color:#b00020;display:none;"></div>
+  <div id="lorenzError"></div>
 </div>
 
+<!-- Thank you -->
+<div class="thanks-block">
+  <div class="thanks-icon"></div>
+  <div class="thanks-text">Merci de votre participation !</div>
+  <div class="thanks-sub">ENS de Rennes · PhDTrack Transition Environnementale</div>
+</div>
+
+{{ endblock }}
+
+{{ block scripts }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-  (function () {
-    // Input data (server-rendered via tojson): array of final budgets for all players
-    const raw = {{ final_budgets_json|safe }};
+(function () {
+  const raw = {{ final_budgets_json|safe }};
+  const budgets = (Array.isArray(raw) ? raw : []).map(Number).filter(Number.isFinite);
+  if (budgets.length === 0) return showError("Aucun budget valide fourni.");
 
-    // Data normalization/validation: make into to numbers and drop non-finite values to avoid NaN in calculations/charts
-    const budgets = (Array.isArray(raw) ? raw : []).map(Number).filter(Number.isFinite);
-    if (budgets.length === 0) return showError("Aucun budget valide fourni.");
+  const minVal = Math.min(...budgets);
+  const nonNeg = minVal < 0 ? budgets.map(v => v - minVal) : budgets.slice();
+  const sorted = nonNeg.slice().sort((a, b) => a - b);
+  const total  = sorted.reduce((s, v) => s + v, 0);
 
-    // Lorenz curves require non-negative values; if negative, shift so the minimum becomes 0
-    const minVal = Math.min(...budgets);
-    const nonNeg = minVal < 0 ? budgets.map(v => v - minVal) : budgets.slice();
-
-    // Work on a sorted copy to build the curve
-    const sorted = nonNeg.slice().sort((a, b) => a - b);
-
-    // Total sum used to convert to cumulative shares
-    const total = sorted.reduce((s, v) => s + v, 0);
-
-    // Compute Lorenz curve points ( in percentages) 
-    const lorenz = [];
-
-    // Degenerate case (everyone has 0): the curve coincides with the diagonal.
-    if (total === 0) {
-      lorenz.push({ x: 0, y: 0 }, { x: 100, y: 100 });
-    } else {
-      let cum = 0;
-      const n = sorted.length;
-      lorenz.push({ x: 0, y: 0 });
-      for (let i = 0; i < n; i++) {
-        cum += sorted[i];
-        lorenz.push({ x: ((i + 1) / n) * 100, y: (cum / total) * 100 });
-      }
+  const lorenz = [];
+  if (total === 0) {
+    lorenz.push({ x: 0, y: 0 }, { x: 100, y: 100 });
+  } else {
+    let cum = 0;
+    const n = sorted.length;
+    lorenz.push({ x: 0, y: 0 });
+    for (let i = 0; i < n; i++) {
+      cum += sorted[i];
+      lorenz.push({ x: ((i + 1) / n) * 100, y: (cum / total) * 100 });
     }
+  }
 
-    // Gini index: G = 1 − 2 × area under the Lorenz curve. Approximate the area via trapezoids between consecutive points (and compute their area).
-    const gini = (() => {
-      const pts = lorenz.map(p => ({ x: p.x / 100, y: p.y / 100 })); // normalize to [0,1]
-      let area = 0;
-      for (let i = 1; i < pts.length; i++) {
-        area += ((pts[i].y + pts[i - 1].y) / 2) * (pts[i].x - pts[i - 1].x);
-      }
-      return Math.max(0, Math.min(1, 1 - 2 * area)); // clamp to [0,1]
-    })();
+  const gini = (() => {
+    const pts = lorenz.map(p => ({ x: p.x / 100, y: p.y / 100 }));
+    let area = 0;
+    for (let i = 1; i < pts.length; i++) {
+      area += ((pts[i].y + pts[i - 1].y) / 2) * (pts[i].x - pts[i - 1].x);
+    }
+    return Math.max(0, Math.min(1, 1 - 2 * area));
+  })();
 
-    // Display the Gini coefficient (if available)
-    const giniEl = document.getElementById('gini');
-    if (giniEl) giniEl.textContent = `Indice de Gini: ${(gini * 100).toFixed(1)}%`;
+  // Show Gini badge
+  const badge = document.getElementById('gini-badge');
+  const giniText = document.getElementById('gini-text');
+  if (badge && giniText) {
+    giniText.textContent = `Indice de Gini : ${(gini * 100).toFixed(1)} %`;
+    badge.style.display = 'inline-flex';
+  }
 
-    // Chart rendering
-    const ctx = document.getElementById('lorenzChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'scatter',
-      data: {
-        datasets: [
-          {  // Reference line (perfect equality)
-            type: 'line',
-            order: 0,
-            label: 'Égalité parfaite',
-            data: [{ x: 0, y: 0 }, { x: 100, y: 100 }],
-            borderColor: 'rgba(220,20,60,1)',
-            borderDash: [6, 4],
-            borderWidth: 2,
-            pointRadius: 0
-          },
-          { // Lorenz curve
-            order: 1,
-            label: 'Courbe de Lorenz',
-            data: lorenz,
-            showLine: true,
-            borderColor: 'rgba(30,144,255,1)',
-            backgroundColor: 'rgba(30,144,255,0.12)',
-            borderWidth: 3,
-            pointRadius: 3,
-            tension: 0
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true },
-          title: {
-            display: true,
-            text: "Plus la courbe s'éloigne de la diagonale, plus les inégalités augmentent"
-          },
-          tooltip: {
-            callbacks: {
-              label: (c) => `(${c.parsed.x.toFixed(1)}%, ${c.parsed.y.toFixed(1)}%)`
-            }
-          }
+  // Detect dark mode for chart colors
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const labelColor = dark ? '#9a9a8e' : '#7a8f82';
+
+  const ctx = document.getElementById('lorenzChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          type: 'line',
+          order: 0,
+          label: 'Égalité parfaite',
+          data: [{ x: 0, y: 0 }, { x: 100, y: 100 }],
+          borderColor: 'rgba(192, 57, 43, 0.7)',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
         },
-        scales: { // Axes in percentage
-          x: {
-            type: 'linear',
-            title: { display: true, text: '% de la population (cumulée)' },
-            min: 0,
-            max: 100,
-            ticks: { callback: (v) => v + '%' }
-          },
-          y: {
-            title: { display: true, text: '% de la richesse (cumulée)' },
-            min: 0,
-            max: 100,
-            ticks: { callback: (v) => v + '%' }
+        {
+          order: 1,
+          label: 'Courbe de Lorenz',
+          data: lorenz,
+          showLine: true,
+          borderColor: '#2e6b7e',
+          backgroundColor: 'rgba(46,107,126,0.10)',
+          borderWidth: 2.5,
+          pointRadius: lorenz.length <= 8 ? 4 : 2,
+          pointBackgroundColor: '#2e6b7e',
+          tension: 0,
+          fill: true,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: labelColor, font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: c => `(${c.parsed.x.toFixed(1)}%, ${c.parsed.y.toFixed(1)}%)`
           }
         }
-      }
-    });
-
-    // Show a readable on-screen message if data are missing/invalid (error)
-    function showError(msg) {
-      const el = document.getElementById('lorenzError');
-      if (el) {
-        el.textContent = msg;
-        el.style.display = 'block';
-      } else {
-        console.error(msg);
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: '% de la population (cumulée)', color: labelColor },
+          min: 0, max: 100,
+          ticks: { callback: v => v + '%', color: labelColor },
+          grid: { color: gridColor }
+        },
+        y: {
+          title: { display: true, text: '% de la richesse (cumulée)', color: labelColor },
+          min: 0, max: 100,
+          ticks: { callback: v => v + '%', color: labelColor },
+          grid: { color: gridColor }
+        }
       }
     }
-  })();
-</script>
+  });
 
-<p style="margin-top: 18px; text-align: center;">Merci de votre participation !</p>
+  function showError(msg) {
+    const el = document.getElementById('lorenzError');
+    if (el) { el.textContent = msg; el.style.display = 'block'; }
+  }
+})();
+</script>
 {{ endblock }}

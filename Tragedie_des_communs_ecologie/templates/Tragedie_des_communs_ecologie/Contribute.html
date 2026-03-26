@@ -1,24 +1,266 @@
 {{ extends 'global/Page.html' }}
-{{ block title }}Tour {{ subsession.round_number }} - Contribution{{ endblock }}
+
+{{ block title }}Contribution — Tour {{ subsession.round_number }}{{ endblock }}
+
+{{ block styles }}
+<style>
+  .budget-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, var(--river-deep) 0%, var(--river-mid) 100%);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    color: white;
+  }
+
+  .budget-display-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+
+  .budget-display-amount {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .budget-display-unit {
+    font-size: 1rem;
+    opacity: 0.7;
+    margin-left: 4px;
+  }
+
+  .contribution-form {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .contrib-label {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+
+  /* Slider styling */
+  .slider-wrap {
+    margin: 20px 0 24px;
+  }
+
+  .slider-track-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--surface-alt);
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--river-mid);
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(46,107,126,0.35);
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    background: var(--river-deep);
+  }
+
+  .slider-value-display {
+    text-align: center;
+    margin-top: 14px;
+  }
+
+  .slider-value-number {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 500;
+    color: var(--river-deep);
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .slider-value-unit {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+
+  .slider-preview {
+    margin-top: 6px;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+
+  /* Hidden number input (still submitted to oTree) */
+  .contrib-number-input {
+    width: 100%;
+    margin-top: 16px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--text-primary);
+    background: var(--surface-alt);
+    display: none; /* hidden — slider drives value */
+  }
+
+  /* River impact hint */
+  .impact-hint {
+    background: var(--earth-pale);
+    border: 1px solid rgba(122,92,58,0.2);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    font-size: 0.88rem;
+    color: var(--earth-dark);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+</style>
+{{ endblock }}
 
 {{ block content }}
 
-<div class="info-box">
-    <p><strong>Votre budget actuel :</strong> {{ current_budget }} UM </p>
-
-    <p style="color: #666; font-style: italic;">
-        Vous pouvez contribuer entre 0 et 10 UM.
-    </p>
-
-    {% if show_tax_warning %}
-        <p style="color: red; font-weight: bold;">⚠️ Une taxe est en vigueur : contribution minimale demandée de 4 UM</p>
-    {% endif %}
-
+<!-- Budget display -->
+<div class="budget-display">
+  <div>
+    <div class="budget-display-label">Votre budget disponible</div>
+    <div class="budget-display-amount">
+      {{ current_budget }}<span class="budget-display-unit">UM</span>
+    </div>
+  </div>
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <circle cx="24" cy="24" r="24" fill="rgba(255,255,255,0.08)"/>
+    <path d="M12 32 C16 26, 22 30, 28 24 C34 18, 38 22, 44 16" stroke="rgba(95,168,184,0.6)" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M4 36 C8 30, 14 34, 20 28 C26 22, 32 26, 38 20" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </svg>
 </div>
 
+<!-- Tax warning -->
+{% if show_tax_warning %}
+<div class="alert alert-warn">
+  <span class="alert-icon"></span>
+  <div>
+    <strong>Taxe en vigueur</strong> — Une contribution minimale de <strong>{{ C.TAX_MIN_CONTRIB }}</strong> est requise.
+    Contribuer en dessous entraîne une amende.
+  </div>
+</div>
+{% endif %}
 
-{{ formfield "contribution" }}
+<!-- Contribution form -->
+<div class="contribution-form">
+  <div class="contrib-label">
+    Combien souhaitez-vous investir dans la restauration du cours d'eau ?
+  </div>
+
+  <div class="slider-wrap">
+    <div class="slider-track-labels">
+      <span>0 UM</span>
+      <span id="slider-max-label">10 UM</span>
+    </div>
+    <input
+      type="range"
+      id="contrib-slider"
+      min="0"
+      max="{{ current_budget }}"
+      step="1"
+      value="0"
+      oninput="updateContrib(this.value)"
+    >
+    <div class="slider-value-display">
+      <span class="slider-value-number" id="slider-display">0</span>
+      <span class="slider-value-unit">UM</span>
+    </div>
+    <div class="slider-preview" id="slider-preview">
+      Budget restant après contribution : <strong id="budget-remaining">{{ current_budget }}</strong> UM
+    </div>
+  </div>
+
+  <!-- The actual oTree form field (hidden, driven by slider) -->
+  {{ formfield "contribution" }}
+</div>
+
+<!-- River impact hint -->
+<div class="impact-hint">
+  <span></span>
+  <div>
+    Chaque UM investie contribue à la restauration collective du cours d'eau.
+    Le niveau atteint dépend de la contribution totale du groupe.
+  </div>
+</div>
 
 {{ next_button }}
 
+{{ endblock }}
+
+{{ block scripts }}
+<script>
+  const slider    = document.getElementById('contrib-slider');
+  const display   = document.getElementById('slider-display');
+  const remaining = document.getElementById('budget-remaining');
+  const hiddenInput = document.getElementById('id_contribution') || document.querySelector('input[name="contribution"]');
+  const maxBudget = Number(slider.max || 0);
+
+  // Cap slider max at min(10, budget)
+  const sliderMax = Math.min(10, maxBudget);
+  slider.max = sliderMax;
+  document.getElementById('slider-max-label').textContent = sliderMax + ' UM';
+
+  function updateContrib(val) {
+    const v = parseInt(val) || 0;
+    display.textContent   = v;
+    remaining.textContent = maxBudget - v;
+    if (hiddenInput) hiddenInput.value = v;
+  }
+
+  function syncFromInput() {
+    if (!hiddenInput) return;
+    let v = parseInt(hiddenInput.value);
+    if (isNaN(v)) v = 0;
+    v = Math.max(0, Math.min(sliderMax, v));
+    slider.value = v;
+    updateContrib(v);
+  }
+
+  if (hiddenInput) {
+    hiddenInput.addEventListener('input', syncFromInput);
+    hiddenInput.addEventListener('change', syncFromInput);
+  }
+
+  // Initialize
+  syncFromInput();
+</script>
 {{ endblock }}

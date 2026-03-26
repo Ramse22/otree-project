@@ -1,8 +1,470 @@
-{% extends "otree/Page.html" %}
-{% load otree static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Tragédie des communs{% endblock %}</title>
 
-{% block global_styles  %}
-{% endblock %}
+  <!-- Google Fonts: Fraunces (editorial display) + DM Sans (clean body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
-{% block global_scripts  %}
-{% endblock %}
+  <style>
+    /* ─── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --river-deep:    #1a3a4a;
+      --river-mid:     #2e6b7e;
+      --river-light:   #5fa8b8;
+      --river-pale:    #c8e8ef;
+      --earth-dark:    #3b2e1e;
+      --earth-mid:     #7a5c3a;
+      --earth-light:   #c4a882;
+      --earth-pale:    #f5ede0;
+      --moss:          #4a7c4e;
+      --moss-light:    #a8d4ab;
+      --sand:          #e8dcc8;
+      --crisis-red:    #8b2020;
+      --crisis-light:  #f5d0d0;
+      --warn-amber:    #8b5e00;
+      --warn-light:    #fff0c2;
+
+      --text-primary:  #1c2b1e;
+      --text-secondary:#4a5e52;
+      --text-muted:    #7a8f82;
+
+      --surface:       #fafaf7;
+      --surface-alt:   #f0ede6;
+      --border:        rgba(58, 90, 65, 0.15);
+
+      --radius-sm:     6px;
+      --radius-md:     12px;
+      --radius-lg:     20px;
+
+      --font-display:  'Fraunces', Georgia, serif;
+      --font-body:     'DM Sans', system-ui, sans-serif;
+
+      --shadow-sm:     0 1px 3px rgba(26,58,74,0.08);
+      --shadow-md:     0 4px 16px rgba(26,58,74,0.10);
+      --shadow-lg:     0 8px 32px rgba(26,58,74,0.14);
+    }
+
+    /* ─── Reset & Base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--text-primary);
+      background: var(--surface);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Animated river background strip ──────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg,
+        var(--river-deep) 0%,
+        var(--river-mid) 30%,
+        var(--river-light) 55%,
+        var(--moss) 80%,
+        var(--river-deep) 100%);
+      background-size: 200% 100%;
+      animation: riverFlow 8s linear infinite;
+      z-index: 100;
+    }
+    @keyframes riverFlow {
+      0%   { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+
+    /* ─── Header ────────────────────────────────────────────────── */
+    .page-header {
+      background: var(--river-deep);
+      color: white;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-icon {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 500;
+      color: white;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+
+    .header-subtitle {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.55);
+      font-weight: 300;
+      margin-top: 1px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .round-badge {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 24px;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.9);
+      letter-spacing: 0.04em;
+    }
+
+    /* ─── Main layout ───────────────────────────────────────────── */
+    .page-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 64px;
+    }
+
+    .page-inner {
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* ─── Page title ────────────────────────────────────────────── */
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      font-weight: 500;
+      color: var(--river-deep);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 28px;
+    }
+
+    /* ─── Cards ─────────────────────────────────────────────────── */
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 16px;
+      background: var(--river-mid);
+      border-radius: 2px;
+    }
+
+    /* ─── River health bar (global component) ───────────────────── */
+    .river-bar-wrap {
+      margin: 0 0 28px;
+    }
+
+    .river-bar-label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .river-bar-track {
+      height: 10px;
+      background: var(--surface-alt);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .river-bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.9s cubic-bezier(.4,0,.2,1),
+                  background 0.9s ease;
+    }
+
+    /* ─── Efficiency level color tokens ─────────────────────────── */
+    .level-0 { --lvl-bg: #8b2020; --lvl-text: #fff;    --lvl-border: #6b1515; --lvl-label: "Effondrement écologique"; }
+    .level-1 { --lvl-bg: #c0392b; --lvl-text: #fff;    --lvl-border: #9b2d2d; --lvl-label: "Dégradation"; }
+    .level-2 { --lvl-bg: #b8860b; --lvl-text: #fff;    --lvl-border: #9a7009; --lvl-label: "Stabilité"; }
+    .level-3 { --lvl-bg: var(--moss); --lvl-text: #fff; --lvl-border: #3a6640; --lvl-label: "Amélioration"; }
+    .level-4 { --lvl-bg: #2e7d32; --lvl-text: #fff;    --lvl-border: #1b5e20; --lvl-label: "Restauration complète"; }
+
+    /* ─── Stat rows ──────────────────────────────────────────────── */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: var(--text-secondary); }
+    .stat-value { font-weight: 500; color: var(--text-primary); }
+    .stat-value.negative { color: var(--crisis-red); }
+    .stat-value.positive { color: var(--moss); }
+    .stat-total {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 500;
+      color: var(--river-deep);
+    }
+
+    /* ─── Alerts ─────────────────────────────────────────────────── */
+    .alert {
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 0.92rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+    .alert-icon { flex-shrink: 0; font-size: 1.1rem; margin-top: 1px; }
+    .alert-warn {
+      background: var(--warn-light);
+      border: 1px solid #e6c84a;
+      color: var(--warn-amber);
+    }
+    .alert-danger {
+      background: var(--crisis-light);
+      border: 1px solid #e0a0a0;
+      color: var(--crisis-red);
+    }
+    .alert-info {
+      background: var(--river-pale);
+      border: 1px solid var(--river-light);
+      color: var(--river-deep);
+    }
+    .alert-success {
+      background: #e8f5e9;
+      border: 1px solid var(--moss-light);
+      color: #1b5e20;
+    }
+
+    /* ─── Form elements ──────────────────────────────────────────── */
+    .controls label,
+    label {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      color: var(--text-primary);
+      background: white;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input[type="number"]:focus,
+    input[type="text"]:focus,
+    select:focus {
+      border-color: var(--river-mid);
+      box-shadow: 0 0 0 3px rgba(46,107,126,0.12);
+    }
+
+    /* Radio buttons for vote */
+    .radio-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .radio-option {
+      flex: 1;
+      position: relative;
+    }
+
+    .radio-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0; height: 0;
+    }
+
+    .radio-option label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 20px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: white;
+      gap: 8px;
+    }
+
+    .radio-option input[type="radio"]:checked + label {
+      border-color: var(--river-mid);
+      background: var(--river-pale);
+      color: var(--river-deep);
+    }
+
+    .radio-option label:hover {
+      border-color: var(--river-light);
+      background: var(--river-pale);
+    }
+
+    /* ─── Next button ────────────────────────────────────────────── */
+    .otree-btn-pk,
+    button[type="submit"],
+    input[type="submit"],
+    .btn-next {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--river-deep);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 13px 28px;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      letter-spacing: 0.01em;
+      margin-top: 24px;
+    }
+
+    .otree-btn-pk:hover,
+    button[type="submit"]:hover,
+    input[type="submit"]:hover {
+      background: var(--river-mid);
+      transform: translateY(-1px);
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────── */
+    .page-footer {
+      background: var(--river-deep);
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+      padding: 14px 20px;
+      font-size: 0.75rem;
+    }
+
+    /* ─── Utility ────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .text-muted { color: var(--text-muted); font-size: 0.9rem; }
+    .mt-4 { margin-top: 32px; }
+    .mb-2 { margin-bottom: 16px; }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .page-header { padding: 14px 18px; }
+      .page-body   { padding: 24px 14px 48px; }
+      .card        { padding: 18px; }
+      .page-title  { font-size: 1.5rem; }
+    }
+  </style>
+
+  {% block styles %}{% endblock %}
+</head>
+<body>
+
+  <!-- ─ Header ─────────────────────────────────────────────────── -->
+  <header class="page-header">
+    <div class="header-brand">
+      <!-- River SVG icon -->
+      <svg class="header-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 28 C8 22, 14 26, 20 20 C26 14, 32 18, 36 12" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M4 34 C8 28, 14 32, 20 26 C26 20, 32 24, 36 18" stroke="rgba(95,168,184,0.7)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <circle cx="10" cy="12" r="5" fill="rgba(74,124,78,0.6)"/>
+        <circle cx="30" cy="10" r="3.5" fill="rgba(74,124,78,0.4)"/>
+        <circle cx="20" cy="8" r="2.5" fill="rgba(74,124,78,0.3)"/>
+      </svg>
+      <div>
+        <div class="header-title">Tragédie des communs</div>
+        <div class="header-subtitle">Restauration d'un cours d'eau</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      {% if subsession %}
+        <div class="round-badge">Tour {{ subsession.round_number }}</div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- ─ Main content ───────────────────────────────────────────── -->
+  <main class="page-body">
+    <div class="page-inner">
+      <form class="otree-form" role="form" id="form" method="post" autocomplete="off">
+
+        <h1 class="page-title">{% block title %}{% endblock %}</h1>
+
+        {% block content %}{% endblock %}
+      </form>
+
+    </div>
+  </main>
+
+  <!-- ─ Footer ─────────────────────────────────────────────────── -->
+  <footer class="page-footer">
+    PhDTrack – Transition Environnementale · ENS de Rennes
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

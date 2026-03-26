@@ -100,8 +100,8 @@ class Group(BaseGroup):
 
     def compute_thresholds(self):
         """Compute thresholds S1..S4 based on number of players and THRESHOLD_RATIOS."""
-        n =self.n_players
-    
+        n = self.n_players
+
         # max total contribution if everyone gives CONTRIB_MAX
         max_total = float(C.CONTRIB_MAX) * n
 
@@ -139,11 +139,13 @@ def set_payoffs(group: BaseGroup):
     """Compute total contribution, classify efficiency level, apply fines/bonuses,
     but never let any player's budget_after go below 0."""
     players = group.get_players()
-    
+
     # Count active players (not dropouts)
-    active_players = [p for p in players if getattr(p.participant, 'status', None) != 'dropout']
+    active_players = [
+        p for p in players if getattr(p.participant, "status", None) != "dropout"
+    ]
     n_active = len(active_players)
-    
+
     # total contributions for the round (only from active players)
     group.total_contribution = sum((p.contribution or cu(0)) for p in active_players)
 
@@ -176,10 +178,10 @@ def set_payoffs(group: BaseGroup):
         # set payoff to reflect the actual change in budget this round
         p.payoff = budget_after_capped - budget_before
         p.budget_after = budget_after_capped
-    
+
     # Handle dropout players (contribution = 0, no payoff)
     for p in players:
-        if getattr(p.participant, 'status', None) == 'dropout':
+        if getattr(p.participant, "status", None) == "dropout":
             p.contribution = cu(0)
             p.payoff = cu(0)
             p.budget_after = p.budget_before
@@ -218,44 +220,47 @@ class Player(BasePlayer):
                 budget = prev.budget_after if prev.budget_after else C.START_BUDGET
         return max(C.CONTRIB_MIN, min(C.CONTRIB_MAX, budget))
 
+
 def custom_export(players):
     """
     Export long format par round - Format style feuille de calcul
     Une ligne = un joueur à un round
     """
     yield [
-        'Player ID',
-        'Budget de départ',
-        'Tour',
-        'Contribution',
-        'Contribution total du groupe',
-        'État de la rivière',
-        'Bonus/Malus (incluant fine)',
-        'Budget fin du tour',
-        'Vote tax'
+        "Player ID",
+        "Budget de départ",
+        "Tour",
+        "Contribution",
+        "Contribution total du groupe",
+        "État de la rivière",
+        "Bonus/Malus (incluant fine)",
+        "Budget fin du tour",
+        "Vote tax",
     ]
-    
+
     # Get unique players (one per participant per session)
     seen_participants = set()
-    
+
     for player in players:
         participant_id = player.participant.id
         # Skip if we've already processed this participant
         if participant_id in seen_participants:
             continue
         seen_participants.add(participant_id)
-        
+
         # Process this participant across all rounds
         for round_num in range(1, C.NUM_ROUNDS + 1):
             player_in_round = player.in_round(round_num)
             first_round_player = player.in_round(1)
             budget_initial = first_round_player.budget_before or C.START_BUDGET
             group_in_round = player_in_round.group
-            
+
             # Use field_maybe_none for all group fields
             efficiency_level = group_in_round.field_maybe_none("efficiency_level") or 2
-            total_contribution = group_in_round.field_maybe_none("total_contribution") or cu(0)
-            
+            total_contribution = group_in_round.field_maybe_none(
+                "total_contribution"
+            ) or cu(0)
+
             if efficiency_level == 0:
                 river_state = "Effondrement écologique"
             elif efficiency_level == 1:
@@ -268,10 +273,12 @@ def custom_export(players):
                 river_state = "Amélioration avancée"
             else:
                 river_state = "Inconnu"
-            
-            vote_tax = player_in_round.vote_tax if player_in_round.vote_tax is not None else ""
+
+            vote_tax = (
+                player_in_round.vote_tax if player_in_round.vote_tax is not None else ""
+            )
             bonus_malus = player_in_round.payoff or cu(0)
-            
+
             yield [
                 player.participant.id_in_session,
                 budget_initial,
@@ -283,6 +290,7 @@ def custom_export(players):
                 player_in_round.budget_after or cu(0),
                 vote_tax,
             ]
+
 
 # -------------------- Pages --------------------
 
@@ -385,7 +393,7 @@ class Results(Page):
     def before_next_page(player: Player, timeout_happened):
         # Track dropouts
         if timeout_happened:
-            player.participant.status = 'dropout'
+            player.participant.status = "dropout"
         # Set budget_before for NEXT round (if not last round)
         if player.round_number < C.NUM_ROUNDS:
             next_player = player.in_round(player.round_number + 1)
@@ -398,13 +406,13 @@ class FinalResults(Page):
     @staticmethod
     def is_displayed(player: Player):
         return player.round_number == C.NUM_ROUNDS
-    
+
     @staticmethod
     def before_next_page(player: Player, timeout_happened):
         # Mark as finished only if not already marked as dropout
-        status = getattr(player.participant, 'status', None)
-        if status != 'dropout':
-            player.participant.status = 'finished'
+        status = getattr(player.participant, "status", None)
+        if status != "dropout":
+            player.participant.status = "finished"
 
     @staticmethod
     def vars_for_template(player: Player):
@@ -435,8 +443,6 @@ class FinalResults(Page):
             avg_contribs=avg_contribs,
             avg_contribs_mean=avg_contribs_mean,  # NEW
         )
-    
-    
 
 
 # ---------------------------- Page sequence ----------------------------

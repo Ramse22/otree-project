@@ -11,9 +11,7 @@ SESSION_CONFIGS = [
     )
 ]
 
-PARTICIPANT_FIELDS = [
-    {'name': 'status', 'default': ''}
-]
+PARTICIPANT_FIELDS = [{"name": "status", "default": ""}]
 
 # settings for html pages
 LANGUAGE_CODE = "en"
@@ -35,9 +33,10 @@ ADMIN_PASSWORD = environ.get("OTREE_ADMIN_PASSWORD")
 # same for secret key
 SECRET_KEY = environ.get("OTREE_SECRET_KEY", "default_secret_key")
 
+# REST API key for lobby session creation (must match OTREE_REST_KEY in lobby)
+OTREE_REST_KEY = environ.get("OTREE_REST_KEY", "dev_rest_key_2025")
+
 INSTALLED_APPS = ["otree"]
 
 # custom export
-CUSTOM_EXPORT_FUNCTIONS = [
-    'Tragedie_des_communs_ecologie.custom_export'
-]
+CUSTOM_EXPORT_FUNCTIONS = ["Tragedie_des_communs_ecologie.custom_export"]
